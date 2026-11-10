@@ -82,7 +82,7 @@ fun TestScreen(
     onBack: () -> Unit
 ) {
     val viewModel: TestViewModel = viewModel(
-        factory = TestViewModel.Factory(vaultDao, questionDao)
+        factory = TestViewModelFactory(vaultDao, questionDao)
     )
     
     val vaults by viewModel.vaults.collectAsState()

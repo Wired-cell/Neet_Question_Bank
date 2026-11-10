@@ -1,53 +1,52 @@
-name: Build Android ARM64 APK
+name: Build Android APK
+
 on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
-permissions:
-  contents: read
-concurrency:
-  group: android-arm64-build
-  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 1
-        sparse-checkout: |
-          .github/workflows
-          app
-          build.gradle.kts
-          gradle.properties
-          settings.gradle.kts
+      
     - name: Set up JDK 17
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v3
       with:
         java-version: '17'
         distribution: 'temurin'
         cache: 'gradle'
+    
     - name: Set up Gradle
-      uses: gradle/actions/setup-gradle@v4
+      uses: gradle/gradle-build-action@v2
       with:
-        gradle-version: '8.4'
+        gradle-version: 8.3
+    
     - name: Set up Android SDK
-      uses: android-actions/setup-android@v4
+      uses: android-actions/setup-android@v3
       with:
-        cmdline-tools-version: 10406996
-        packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
-    - name: Build ARM64 APK
+        sdk-platform: android-34
+        sdk-build-tools: 34.0.0
+        sdk-platform-tools: true
+        accept-licenses: true
+    
+    - name: Build APK
       run: gradle assembleDebug --no-daemon --stacktrace
-    - name: Verify APK ABI
-      run: |
-        APK=app/build/outputs/apk/debug/app-debug.apk
-        unzip -Z1 "$APK" | grep -q '^lib/arm64-v8a/' || { echo "ARM64 native libraries were not packaged"; exit 1; }
-        OTHER_ABIS=$(unzip -Z1 "$APK" | awk -F/ '$1 == "lib" {print $2}' | sort -u | grep -v '^arm64-v8a$' || true)
-        if [ -n "$OTHER_ABIS" ]; then echo "Unexpected ABIs found: $OTHER_ABIS"; exit 1; fi
+      env:
+        ANDROID_HOME: /usr/local/lib/android/sdk
+        ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+    
     - name: Rename APK
-      run: mv app/build/outputs/apk/debug/app-debug.apk app-debug-arm64-${{ github.sha }}.apk
-    - name: Upload ARM64 APK
+      run: mv app/build/outputs/apk/debug/app-debug.apk app-debug-${{ github.sha }}.apk
+    
+    - name: Upload APK as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: debug-apk-arm64
-        path: app-debug-arm64-${{ github.sha }}.apk
+        name: debug-apk
+        path: app-debug-${{ github.sha }}.apk
         retention-days: 30

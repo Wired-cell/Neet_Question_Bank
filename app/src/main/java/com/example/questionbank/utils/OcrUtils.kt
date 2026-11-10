@@ -76,9 +76,9 @@ object OcrUtils {
 
             val stringBuilder = StringBuilder()
             for (block in blocks) {
-                stringBuilder.append(block.text).append("\\n")
+                stringBuilder.append(block.text).append('\n')
                 for (line in block.lines) {
-                    stringBuilder.append(line.text).append("\\n")
+                    stringBuilder.append(line.text).append('\n')
                 }
             }
             stringBuilder.toString().trim()

@@ -30,6 +30,7 @@ jobs:
     - name: Set up Android SDK
       uses: android-actions/setup-android@v3
       with:
+        cmdline-tools-version: 10406996
         sdk-platform: android-34
         sdk-build-tools: 34.0.0
         sdk-platform-tools: true
@@ -37,16 +38,3 @@ jobs:
     
     - name: Build APK
       run: gradle assembleDebug --no-daemon --stacktrace
-      env:
-        ANDROID_HOME: /usr/local/lib/android/sdk
-        ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-    
-    - name: Rename APK
-      run: mv app/build/outputs/apk/debug/app-debug.apk app-debug-${{ github.sha }}.apk
-    
-    - name: Upload APK as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: debug-apk
-        path: app-debug-${{ github.sha }}.apk
-        retention-days: 30

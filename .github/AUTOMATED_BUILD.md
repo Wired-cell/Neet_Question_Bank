@@ -34,7 +34,7 @@ git push origin main
 **What happens:**
 - GitHub Actions automatically builds your debug APK
 - APK is uploaded as an **artifact** (available for 30 days)
-- A **release is created** with the APK
+- No release is created by this workflow; tagged releases are handled separately by `release-apk.yml`
 
 **Where to find it:**
 1. Go to your repo: https://github.com/Wired-cell/Neet_Question_Bank
@@ -165,7 +165,7 @@ Then watch the magic happen in the **Actions** tab! 🎩✨
 - ✅ Can be triggered manually
 - ✅ Builds debug APK
 - ✅ Uploads APK as artifact
-- ✅ Creates release on push to `main`
+- ✅ Uploads a debug APK artifact
 
 ### release-apk.yml
 - ✅ Triggers on tag push (e.g., `v1.0.0`)
@@ -208,7 +208,7 @@ Then watch the magic happen in the **Actions** tab! 🎩✨
 
 ✅ **GitHub Actions workflows created**
 ✅ **Automatic APK building on push**
-✅ **Automatic releases on tag push**
+✅ **Versioned releases on tag push**
 ✅ **Full documentation provided**
 
 **You're all set!** Just push to `main` or create a tag, and GitHub will build your APK automatically. 🎉

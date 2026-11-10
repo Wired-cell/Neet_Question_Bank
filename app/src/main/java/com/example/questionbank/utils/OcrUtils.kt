@@ -99,7 +99,7 @@ object OcrUtils {
         // Pattern to detect option-like lines
         // Very permissive - matches anything that looks like it could be an option
         val optionPattern = Regex(
-            "^(?:\d+[)\.]\s*|[A-Da-d][)\.]\s*|[\(]?\d+[\)]\s*).+"
+            """^(?:\d+[)\.]\s*|[A-Da-d][)\.]\s*|[\(]?\d+[\)]\s*).+"""
         )
         
         val options = mutableListOf<String>()
@@ -134,7 +134,7 @@ object OcrUtils {
         // If we didn't find 4 options at the bottom, try looking for any 4 option-like lines
         if (options.size < 4) {
             val allOptionLines = lines.filter { line ->
-                optionPattern.matches(line) || line.matches(Regex("^[A-Da-d\d]+\)?\.?\s+.+"))
+                optionPattern.matches(line) || line.matches(Regex("""^[A-Da-d\d]+\)?\.?\s+.+"""))
             }
             
             // Take the last 4 option-like lines
@@ -157,10 +157,10 @@ object OcrUtils {
         // Clean up options - remove any numbering/lettering at the start
         val cleanedOptions = options.mapIndexed { index, option ->
             val cleaned = option
-                .replace(Regex("^[\dA-Da-d]\)\s*"), "")
-                .replace(Regex("^[\dA-Da-d]\.\s*"), "")
-                .replace(Regex("^\(\d+\)\s*"), "")
-                .replace(Regex("^[ivxlCDM]+[)\.]\s*"), "")  // Handle roman numerals like (i), (ii), etc.
+                .replace(Regex("""^[\dA-Da-d]\)\s*"""), "")
+                .replace(Regex("""^[\dA-Da-d]\.\s*"""), "")
+                .replace(Regex("""^\(\d+\)\s*"""), "")
+                .replace(Regex("""^[ivxlCDM]+[)\.]\s*"""), "")  // Handle roman numerals like (i), (ii), etc.
                 .trim()
             
             // Add letter prefix (A, B, C, D)

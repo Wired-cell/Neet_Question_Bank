@@ -12,7 +12,7 @@ This repository now includes **automated CI/CD workflows** that will build your 
 - **Trigger**: Push to `main`, PR to `main`, or manual trigger
 - **Output**: Debug APK (`app-debug.apk`)
 - **Artifacts**: Uploaded to GitHub Actions artifacts (30 days retention)
-- **Release**: Automatically creates a release on push to `main`
+- **Release**: Does not publish a release; tagged releases use `release-apk.yml`
 
 ### 2. **release-apk.yml** - Build & Release APK
 - **Trigger**: Push a new tag (e.g., `v1.0.0`) or manual trigger with version input
@@ -34,7 +34,7 @@ git push origin main
 GitHub Actions will:
 1. ✅ Build the debug APK
 2. ✅ Upload as artifact
-3. ✅ Create a release with the APK
+3. Check the build result and download the artifact
 
 **Access the APK:**
 - Go to: **Actions** tab → Click on the workflow run → Download artifacts

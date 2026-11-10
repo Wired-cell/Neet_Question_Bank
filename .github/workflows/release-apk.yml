@@ -37,6 +37,7 @@ jobs:
         sdk-platform: android-34
         sdk-build-tools: 34.0.0
         sdk-platform-tools: true
+        sdk-cmdline-tools: 10406996
         accept-licenses: true
     
     - name: Build Debug APK

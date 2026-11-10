@@ -35,19 +35,16 @@ class VaultViewModel(private val vaultDao: VaultDao) : ViewModel() {
             _isLoading.value = true
             vaultDao.getAllVaults().collect { vaults ->
                 if (vaults.isEmpty()) {
-                    // Initialize with default vaults
-                    defaultVaults.forEach { vault ->
-                        vaultDao.insert(vault)
-                    }
-                    vaultDao.getAllVaults().collect { _vaults.value = it }
+                    // Initialize default vaults once; the Room Flow emits the inserted rows.
+                    defaultVaults.forEach { vault -> vaultDao.insert(vault) }
                 } else {
                     _vaults.value = vaults
+                    _isLoading.value = false
                 }
             }
-            _isLoading.value = false
         }
     }
-    
+
     fun getRootVaults(): Flow<List<Vault>> = vaultDao.getAllRootVaults()
     
     fun getSubVaults(parentId: Long): Flow<List<Vault>> = vaultDao.getSubVaults(parentId)

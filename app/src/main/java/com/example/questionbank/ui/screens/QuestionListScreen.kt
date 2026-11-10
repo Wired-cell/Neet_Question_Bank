@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -266,10 +267,12 @@ fun QuestionCard(
                         val isCorrect = index == question.correctOptionIndex
                         Card(
                             modifier = Modifier.weight(1f),
-                            containerColor = if (isCorrect) 
-                                MaterialTheme.colorScheme.primaryContainer
-                            else
-                                MaterialTheme.colorScheme.surfaceVariant
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isCorrect)
+                                    MaterialTheme.colorScheme.primaryContainer
+                                else
+                                    MaterialTheme.colorScheme.surfaceVariant
+                            )
                         ) {
                             Text(
                                 text = "${('A' + index)}. $option",
@@ -310,7 +313,7 @@ fun QuestionCard(
                 Spacer(modifier = Modifier.height(12.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Text(
                         text = question.explanation,

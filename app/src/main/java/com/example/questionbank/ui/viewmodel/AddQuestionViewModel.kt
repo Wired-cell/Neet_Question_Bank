@@ -243,9 +243,9 @@ class AddQuestionViewModel(
     private fun autoDetectOptions(text: String) {
         // Pattern to detect options like A) ..., B) ..., etc.
         val optionPatterns = listOf(
-            Regex("([A-Da-d])\)\s+(.+?)(?=\s*[A-Da-d]|\)|$)"),
-            Regex("([A-Da-d])\s*\.\s+(.+?)(?=\s*[A-Da-d]|\.|$)"),
-            Regex("([A-Da-d])\s*-\s+(.+?)(?=\s*[A-Da-d]|-|$)")
+            Regex("""([A-Da-d])\)\s+(.+?)(?=\s*[A-Da-d]|\)|$)"""),
+            Regex("""([A-Da-d])\s*\.\s+(.+?)(?=\s*[A-Da-d]|\.|$)"""),
+            Regex("""([A-Da-d])\s*-\s+(.+?)(?=\s*[A-Da-d]|-|$)""")
         )
         
         val detectedOptions = mutableListOf<String>()
@@ -358,5 +358,3 @@ class AddQuestionViewModel(
         }
     }
 }
-
-import androidx.lifecycle.ViewModelProvider

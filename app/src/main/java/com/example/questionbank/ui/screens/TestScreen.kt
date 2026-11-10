@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -72,7 +73,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.questionbank.database.QuestionDao
 import com.example.questionbank.database.VaultDao
 import com.example.questionbank.ui.viewmodel.TestViewModel
-import com.example.questionbank.viewmodel.AppViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -294,10 +294,12 @@ fun VaultSelectionItem(
     ) {
         Card(
             modifier = Modifier.size(32.dp),
-            containerColor = if (isSelected) 
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                Color(vault.color)
+            colors = CardDefaults.cardColors(
+                containerColor = if (isSelected)
+                    MaterialTheme.colorScheme.primaryContainer
+                else
+                    Color(vault.color)
+            )
         ) {
             if (isSelected) {
                 Icon(
@@ -478,7 +480,7 @@ fun TestQuestionScreen(
             if (isAnswered && question.explanation.isNotBlank()) {
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Column(
                         modifier = Modifier
@@ -525,7 +527,7 @@ fun TestQuestionScreen(
                 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    containerColor = feedbackBg
+                    colors = CardDefaults.cardColors(containerColor = feedbackBg)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -628,10 +630,10 @@ fun OptionItem(
         else -> MaterialTheme.colorScheme.outline
     }
     
-    ElevatedCard(
+    Card(
         onClick = { if (enabled) onClick() },
         modifier = Modifier.fillMaxWidth(),
-        containerColor = backgroundColor,
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
         border = if (isSelected || isCorrect || isIncorrect) {
             androidx.compose.material3.CardDefaults.outlinedCardBorder().copy(
                 brush = androidx.compose.ui.graphics.SolidColor(borderColor),

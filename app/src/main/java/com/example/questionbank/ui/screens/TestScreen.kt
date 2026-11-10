@@ -155,6 +155,7 @@ fun TestScreen(
                     currentQuestion = currentQuestion,
                     currentQuestionIndex = currentQuestionIndex,
                     totalQuestions = totalQuestions,
+                    timeRemaining = timeRemaining,
                     selectedOption = selectedOption,
                     isAnswered = isAnswered,
                     isCorrect = isCorrect,
@@ -332,6 +333,7 @@ fun TestQuestionScreen(
     currentQuestion: com.example.questionbank.model.Question?,
     currentQuestionIndex: Int,
     totalQuestions: Int,
+    timeRemaining: Long,
     selectedOption: Int?,
     isAnswered: Boolean,
     isCorrect: Boolean?,
@@ -375,8 +377,8 @@ fun TestQuestionScreen(
                 Text(
                     text = viewModel.getFormattedTimeLong(),
                     style = MaterialTheme.typography.labelLarge,
-                    color = if (timeRemaining <= 60 * 1000) MaterialTheme.colorScheme.error 
-                            else if (timeRemaining <= 10 * 60 * 1000) MaterialTheme.colorScheme.tertiary
+                    color = if (timeRemaining <= 60_000L) MaterialTheme.colorScheme.error 
+                            else if (timeRemaining <= 10 * 60 * 1000L) MaterialTheme.colorScheme.tertiary
                             else MaterialTheme.colorScheme.onSurface
                 )
             }

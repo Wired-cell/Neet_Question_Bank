@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -104,7 +105,7 @@ fun VaultListScreen(
             ) {
                 FloatingActionButton(
                     onClick = { onNavigateToAddQuestion(0) },
-                    containerColor = MaterialTheme.colorScheme.primary,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary,)
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Add Question")
@@ -112,7 +113,7 @@ fun VaultListScreen(
                 
                 FloatingActionButton(
                     onClick = onNavigateToTestMode,
-                    containerColor = MaterialTheme.colorScheme.tertiary,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiary,)
                     contentColor = MaterialTheme.colorScheme.onTertiary
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = "Test Mode")
@@ -212,7 +213,7 @@ fun VaultCard(
                     modifier = Modifier
                         .size(48.dp)
                         .aspectRatio(1f),
-                    containerColor = Color(vault.color)
+                    colors = CardDefaults.cardColors(containerColor = Color(vault.color))
                 ) {
                     Text(
                         text = vault.icon.ifEmpty { vault.name.take(1).uppercase() },
@@ -284,7 +285,7 @@ fun SubVaultItem(
     ) {
         Card(
             modifier = Modifier.size(40.dp),
-            containerColor = Color(vault.color)
+            colors = CardDefaults.cardColors(containerColor = Color(vault.color))
         ) {
             Text(
                 text = vault.icon.ifEmpty { vault.name.take(1).uppercase() },

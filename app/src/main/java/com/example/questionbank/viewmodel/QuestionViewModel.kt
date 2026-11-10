@@ -55,8 +55,8 @@ class QuestionViewModel(private val questionDao: QuestionDao) : ViewModel() {
             _isLoading.value = true
             questionDao.getQuestionsByVault(vaultId).collect { questions ->
                 _questions.value = questions
+                _isLoading.value = false
             }
-            _isLoading.value = false
         }
     }
     

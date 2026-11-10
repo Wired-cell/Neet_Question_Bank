@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -50,14 +50,3 @@ jobs:
         path: app-debug-${{ github.sha }}.apk
         retention-days: 30
 
-    - name: Create Release (on push to main)
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      uses: softprops/action-gh-release@v2
-      with:
-        name: Release v1.0.0
-        tag_name: v1.0.0
-        files: app-debug-${{ github.sha }}.apk
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

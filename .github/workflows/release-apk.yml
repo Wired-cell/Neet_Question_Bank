@@ -12,7 +12,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: android-arm64-release-\${{ github.ref }}
+  group: android-arm64-release-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   build:
@@ -52,20 +52,20 @@ jobs:
           OTHER_ABIS=$(unzip -Z1 "$APK" | awk -F/ '$1 == "lib" {print $2}' | sort -u | grep -v '^arm64-v8a$' || true)
           if [ -n "$OTHER_ABIS" ]; then echo "Unexpected ABIs found: $OTHER_ABIS"; exit 1; fi
       - name: Rename APK
-        run: mv app/build/outputs/apk/release/app-release-unsigned.apk app-release-arm64-\${{ github.ref_name }}.apk
+        run: mv app/build/outputs/apk/release/app-release-unsigned.apk app-release-arm64-${{ github.ref_name }}.apk
       - name: Upload ARM64 APK
         uses: actions/upload-artifact@v4
         with:
           name: release-apk-arm64
-          path: app-release-arm64-\${{ github.ref_name }}.apk
+          path: app-release-arm64-${{ github.ref_name }}.apk
           retention-days: 30
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Release \${{ github.ref_name }}
-          tag_name: \${{ github.ref_name }}
-          files: app-release-arm64-\${{ github.ref_name }}.apk
+          name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          files: app-release-arm64-${{ github.ref_name }}.apk
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -44,10 +44,10 @@ jobs:
         OTHER_ABIS=$(unzip -Z1 "$APK" | awk -F/ '$1 == "lib" {print $2}' | sort -u | grep -v '^arm64-v8a$' || true)
         if [ -n "$OTHER_ABIS" ]; then echo "Unexpected ABIs found: $OTHER_ABIS"; exit 1; fi
     - name: Rename APK
-      run: mv app/build/outputs/apk/debug/app-debug.apk app-debug-arm64-\${{ github.sha }}.apk
+      run: mv app/build/outputs/apk/debug/app-debug.apk app-debug-arm64-${{ github.sha }}.apk
     - name: Upload ARM64 APK
       uses: actions/upload-artifact@v4
       with:
         name: debug-apk-arm64
-        path: app-debug-arm64-\${{ github.sha }}.apk
+        path: app-debug-arm64-${{ github.sha }}.apk
         retention-days: 30

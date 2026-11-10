@@ -26,6 +26,11 @@ jobs:
         distribution: 'temurin'
         cache: 'gradle'
     
+    - name: Set up Gradle
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: 8.3
+    
     - name: Install Android SDK
       run: |
         # Install command-line tools
@@ -48,13 +53,13 @@ jobs:
         ANDROID_HOME: /usr/local/lib/android/sdk
     
     - name: Build Debug APK
-      run: ./gradlew assembleDebug --no-daemon
+      run: gradle assembleDebug --no-daemon
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     
     - name: Build Release APK
-      run: ./gradlew assembleRelease --no-daemon
+      run: gradle assembleRelease --no-daemon
       env:
         ANDROID_HOME: /usr/local/lib/android/sdk
         ANDROID_SDK_ROOT: /usr/local/lib/android/sdk

@@ -261,7 +261,7 @@ fun AddQuestionScreen(
             // Image Preview
             if (imageUri != null) {
                 ImagePreviewCard(
-                    imageUri = imageUri,
+                    imageUri = imageUri!!,
                     onCropClick = {
                         // Launch cropper for diagram extraction
                         val cropOptions = CropImageContractOptions(

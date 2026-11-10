@@ -56,7 +56,7 @@ dependencies {
     implementation("com.github.bumptech.glide:glide:4.16.0")
     kapt("com.github.bumptech.glide:compiler:4.16.0")
     implementation("io.coil-kt:coil-compose:2.5.0")
-    implementation("com.github.CanHub:android-image-cropper:4.5.0")
+    implementation("com.vanniktech:android-image-cropper:4.5.0")
     implementation("com.guolindev.permissionx:permissionx:1.7.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

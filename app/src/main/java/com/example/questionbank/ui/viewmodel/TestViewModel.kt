@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlin.random.Random
@@ -135,15 +136,11 @@ class TestViewModel(
             if (_selectedVaults.value.isEmpty()) {
                 // If no vaults selected, use all leaf vaults
                 getLeafVaults().forEach { vault ->
-                    questionDao.getQuestionsByVault(vault.id).collect { questions ->
-                        allQuestions.addAll(questions)
-                    }
+                    allQuestions.addAll(questionDao.getQuestionsByVault(vault.id).first())
                 }
             } else {
                 _selectedVaults.value.forEach { vaultId ->
-                    questionDao.getQuestionsByVault(vaultId).collect { questions ->
-                        allQuestions.addAll(questions)
-                    }
+                    allQuestions.addAll(questionDao.getQuestionsByVault(vaultId).first())
                 }
             }
             

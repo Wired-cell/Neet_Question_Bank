@@ -79,8 +79,8 @@ dependencies {
     implementation("androidx.camera:camera-view:1.3.0")
 
     // ML Kit for OCR
-    implementation("com.google.mlkit:text-recognition:19.0.0")
-    implementation("com.google.mlkit:object-detection-custom:17.2.0")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation("com.google.mlkit:object-detection-custom:17.0.2")
 
     // Image loading
     implementation("com.github.bumptech.glide:glide:4.16.0")
@@ -90,7 +90,7 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.5.0")
 
     // Image Cropping
-    implementation("com.canhub.cropper:cropper:4.5.0")
+    implementation("com.vanniktech:android-image-cropper:4.5.0")
 
     // Permissions
     implementation("com.guolindev.permissionx:permissionx:1.7.1")

@@ -37,7 +37,7 @@ jobs:
         packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
 
     - name: Build APK
-      run: gradle assembleDebug --no-daemon
+      run: gradle assembleDebug --no-daemon --stacktrace --info
 
     - name: Rename APK
       run: |

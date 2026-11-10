@@ -7,6 +7,11 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.questionbank.database.QuestionDao
 import com.example.questionbank.database.VaultDao
+import com.example.questionbank.ui.screens.AddQuestionScreen
+import com.example.questionbank.ui.screens.QuestionListScreen
+import com.example.questionbank.ui.screens.SettingsScreen
+import com.example.questionbank.ui.screens.TestScreen
+import com.example.questionbank.ui.screens.VaultListScreen
 
 @Composable
 fun AppNavigation(vaultDao: VaultDao, questionDao: QuestionDao) {

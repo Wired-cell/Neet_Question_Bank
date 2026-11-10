@@ -37,10 +37,9 @@ class VaultViewModel(private val vaultDao: VaultDao) : ViewModel() {
                 if (vaults.isEmpty()) {
                     // Initialize default vaults once; the Room Flow emits the inserted rows.
                     defaultVaults.forEach { vault -> vaultDao.insert(vault) }
-                } else {
-                    _vaults.value = vaults
-                    _isLoading.value = false
                 }
+                _vaults.value = vaults
+                _isLoading.value = false
             }
         }
     }

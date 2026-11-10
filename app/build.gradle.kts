@@ -27,7 +27,7 @@ android {
     }
     kotlinOptions { jvmTarget = "1.8" }
     buildFeatures { compose = true; viewBinding = true }
-    composeOptions { kotlinCompilerExtensionVersion = "1.5.5" }
+    composeOptions { kotlinCompilerExtensionVersion = "1.5.4" }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
 }
 dependencies {
@@ -56,7 +56,7 @@ dependencies {
     implementation("com.github.bumptech.glide:glide:4.16.0")
     kapt("com.github.bumptech.glide:compiler:4.16.0")
     implementation("io.coil-kt:coil-compose:2.5.0")
-    implementation("com.vanniktech:android-image-cropper:4.5.0")
+    implementation("com.github.CanHub:android-image-cropper:4.5.0")
     implementation("com.guolindev.permissionx:permissionx:1.7.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

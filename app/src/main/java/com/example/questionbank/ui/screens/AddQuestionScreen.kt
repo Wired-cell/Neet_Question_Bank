@@ -242,8 +242,8 @@ fun AddQuestionScreen(
                 questionText = questionText,
                 onTextChange = viewModel::setQuestionText,
                 onPasteClick = { 
-                    val clipboard = android.content.ClipboardManager(context)
-                    val clip = clipboard.primaryClip
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                    val clip = clipboard?.primaryClip
                     if (clip != null && clip.itemCount > 0) {
                         val text = clip.getItemAt(0).text.toString()
                         viewModel.setQuestionText(text)
@@ -263,7 +263,7 @@ fun AddQuestionScreen(
                         val cropOptions = CropImageContractOptions(
                             uri = imageUri,
                             cropImageOptions = CropImageOptions(
-                                guideline = CropImageOptions.Guideline.MOVEABLE,
+                                guideline = CropImageOptions.Guideline.ON,
                                 aspectRatioX = 1,
                                 aspectRatioY = 1,
                                 outputCompressFormat = Bitmap.CompressFormat.JPEG,

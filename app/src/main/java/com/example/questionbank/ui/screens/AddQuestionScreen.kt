@@ -36,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
@@ -85,6 +86,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -134,7 +136,6 @@ fun AddQuestionScreen(
     var showExplanationDialog by remember { mutableStateOf(false) }
     
     // Camera and gallery launchers
-    val cameraPermission = PermissionUtils.rememberCameraPermission()
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
@@ -143,6 +144,12 @@ fun AddQuestionScreen(
                 viewModel.processImage(context, uri)
             }
         }
+    }
+
+    val requestCameraPermission = PermissionUtils.rememberCameraPermission {
+        val uri = createImageUri(context)
+        viewModel.setImageUri(uri)
+        cameraLauncher.launch(uri)
     }
     
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -390,11 +397,7 @@ fun AddQuestionScreen(
             ImageSourceDialog(
                 onCameraClick = {
                     showImageSourceDialog = false
-                    PermissionUtils.requestCameraPermission(cameraPermission) {
-                        val uri = createImageUri(context)
-                        viewModel.setImageUri(uri)
-                        cameraLauncher.launch(uri)
-                    }
+                    requestCameraPermission()
                 },
                 onGalleryClick = {
                     showImageSourceDialog = false

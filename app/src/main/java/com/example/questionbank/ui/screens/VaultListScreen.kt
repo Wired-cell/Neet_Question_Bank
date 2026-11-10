@@ -105,7 +105,7 @@ fun VaultListScreen(
             ) {
                 FloatingActionButton(
                     onClick = { onNavigateToAddQuestion(0) },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary,)
+                    containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Add Question")
@@ -113,7 +113,7 @@ fun VaultListScreen(
                 
                 FloatingActionButton(
                     onClick = onNavigateToTestMode,
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiary,)
+                    containerColor = MaterialTheme.colorScheme.tertiary,
                     contentColor = MaterialTheme.colorScheme.onTertiary
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = "Test Mode")

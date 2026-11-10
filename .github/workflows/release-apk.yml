@@ -26,18 +26,33 @@ jobs:
         distribution: 'temurin'
         cache: 'gradle'
     
-    - name: Set up Android SDK
-      uses: android-actions/setup-android@v3
-      with:
-        sdk-version: 34
-        build-tools-version: 34.0.0
-        accept-licenses: true
+    - name: Install Android SDK
+      run: |
+        # Install command-line tools
+        mkdir -p $ANDROID_HOME/cmdline-tools/latest
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O cmdline-tools.zip
+        unzip -q cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools/latest
+        rm cmdline-tools.zip
+        
+        # Accept licenses
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME --licenses > /dev/null
+        
+        # Install required packages
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platforms;android-34" "build-tools;34.0.0" "platform-tools" > /dev/null
+      env:
+        ANDROID_HOME: /usr/local/lib/android/sdk
     
     - name: Build Debug APK
       run: ./gradlew assembleDebug --no-daemon
+      env:
+        ANDROID_HOME: /usr/local/lib/android/sdk
+        ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     
     - name: Build Release APK
       run: ./gradlew assembleRelease --no-daemon
+      env:
+        ANDROID_HOME: /usr/local/lib/android/sdk
+        ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     
     - name: Rename APKs
       run: |

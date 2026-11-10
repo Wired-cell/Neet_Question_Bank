@@ -14,6 +14,7 @@ import androidx.compose.foundation.border
 import com.canhub.cropper.CropImageContract
 import com.canhub.cropper.CropImageContractOptions
 import com.canhub.cropper.CropImageOptions
+import com.canhub.cropper.CropImageView
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -51,6 +53,7 @@ import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -89,6 +92,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -261,15 +265,15 @@ fun AddQuestionScreen(
                     onCropClick = {
                         // Launch cropper for diagram extraction
                         val cropOptions = CropImageContractOptions(
-                            uri = imageUri,
+                            uri = imageUri!!,
                             cropImageOptions = CropImageOptions(
-                                guideline = CropImageOptions.Guideline.ON,
+                                guidelines = CropImageView.Guidelines.ON,
                                 aspectRatioX = 1,
                                 aspectRatioY = 1,
                                 outputCompressFormat = Bitmap.CompressFormat.JPEG,
                                 outputCompressQuality = 90,
                                 fixAspectRatio = false,
-                                cropShape = CropImageOptions.CropShape.RECTANGLE
+                                cropShape = CropImageView.CropShape.RECTANGLE
                             )
                         )
                         cropperLauncher.launch(cropOptions)
@@ -291,7 +295,7 @@ fun AddQuestionScreen(
             // OCR Result
             if (ocrResult != null) {
                 OcrResultCard(
-                    ocrResult = ocrResult,
+                    ocrResult = ocrResult!!,
                     onUseQuestionClick = { viewModel.setQuestionText(it) },
                     onUseOptionsClick = { options ->
                         viewModel.setOptions(options)
@@ -330,16 +334,16 @@ fun AddQuestionScreen(
                     imageUri = imageUri,
                     onCropFromImage = {
                         val cropOptions = CropImageContractOptions(
-                            uri = imageUri,
+                            uri = imageUri!!,
                             cropImageOptions = CropImageOptions(
-                                guideline = CropImageOptions.Guideline.MOVEABLE,
+                                guidelines = CropImageView.Guidelines.ON,
                                 aspectRatioX = 1,
                                 aspectRatioY = 1,
                                 outputCompressFormat = Bitmap.CompressFormat.JPEG,
                                 outputCompressQuality = 90,
                                 fixAspectRatio = false,
-                                cropShape = CropImageOptions.CropShape.RECTANGLE,
-                                title = "Crop Diagram"
+                                cropShape = CropImageView.CropShape.RECTANGLE,
+                                activityTitle = "Crop Diagram"
                             )
                         )
                         cropperLauncher.launch(cropOptions)
@@ -448,7 +452,7 @@ fun VaultSelector(
                 if (selectedVault != null) {
                     Card(
                         modifier = Modifier.size(32.dp),
-                        containerColor = Color(selectedVault.color)
+                        colors = CardDefaults.cardColors(containerColor = Color(selectedVault.color))
                     ) {
                         Text(
                             text = selectedVault.icon.ifEmpty { selectedVault.name.take(1) },
@@ -552,19 +556,21 @@ fun ImagePreviewCard(
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                val bitmap = remember(imageUri) {
+                val context = LocalContext.current
+
+                val bitmap = remember(imageUri, context) {
                     try {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                             ImageDecoder.decodeBitmap(
                                 ImageDecoder.createSource(
-                                    LocalContext.current.contentResolver,
-                                    imageUri
+                                    context.contentResolver,
+                                    imageUri!!
                                 )
                             )
                         } else {
                             MediaStore.Images.Media.getBitmap(
-                                LocalContext.current.contentResolver,
-                                imageUri
+                                context.contentResolver,
+                                imageUri!!
                             )
                         }
                     } catch (e: Exception) {
@@ -656,7 +662,7 @@ fun OcrResultCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Text(
                         text = ocrResult.questionText,
@@ -693,7 +699,7 @@ fun OcrResultCard(
                     ocrResult.options.forEachIndexed { index, option ->
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                         ) {
                             Text(
                                 text = option,
@@ -721,7 +727,7 @@ fun OcrResultCard(
                 Spacer(modifier = Modifier.height(12.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -781,7 +787,7 @@ fun OcrResultCard(
             Spacer(modifier = Modifier.height(8.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Text(
                     text = ocrText,
@@ -822,19 +828,21 @@ fun DiagramPreviewCard(
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                val bitmap = remember(diagramUri) {
+                val context = LocalContext.current
+
+                val bitmap = remember(diagramUri, context) {
                     try {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                             ImageDecoder.decodeBitmap(
                                 ImageDecoder.createSource(
-                                    LocalContext.current.contentResolver,
-                                    diagramUri
+                                    context.contentResolver,
+                                    diagramUri!!
                                 )
                             )
                         } else {
                             MediaStore.Images.Media.getBitmap(
-                                LocalContext.current.contentResolver,
-                                diagramUri
+                                context.contentResolver,
+                                diagramUri!!
                             )
                         }
                     } catch (e: Exception) {
@@ -1009,19 +1017,21 @@ fun DiagramSection(
                             .clip(RoundedCornerShape(8.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                     ) {
-                        val bitmap = remember(diagramUri) {
+                        val context = LocalContext.current
+
+                        val bitmap = remember(diagramUri, context) {
                             try {
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                                     ImageDecoder.decodeBitmap(
                                         ImageDecoder.createSource(
-                                            LocalContext.current.contentResolver,
-                                            diagramUri
+                                            context.contentResolver,
+                                            diagramUri!!
                                         )
                                     )
                                 } else {
                                     MediaStore.Images.Media.getBitmap(
-                                        LocalContext.current.contentResolver,
-                                        diagramUri
+                                        context.contentResolver,
+                                        diagramUri!!
                                     )
                                 }
                             } catch (e: Exception) {
@@ -1164,7 +1174,7 @@ fun VaultDialogItem(
         }
         Card(
             modifier = Modifier.size(24.dp),
-            containerColor = Color(vault.color)
+            colors = CardDefaults.cardColors(containerColor = Color(vault.color))
         ) {
             Text(
                 text = vault.icon.ifEmpty { vault.name.take(1) },

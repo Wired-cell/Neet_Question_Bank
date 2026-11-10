@@ -2,16 +2,21 @@ package com.example.questionbank.utils
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.io.IOException
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 object OcrUtils {
     
@@ -48,37 +53,41 @@ object OcrUtils {
     /**
      * Recognize text from a Bitmap using ML Kit
      */
-    fun recognizeTextFromBitmap(
+    suspend fun recognizeTextFromBitmap(
         recognizer: TextRecognizer,
         bitmap: Bitmap
     ): String {
         return try {
             val image = InputImage.fromBitmap(bitmap, 0)
-            val result = recognizer.process(image)
-            
+            val result = suspendCancellableCoroutine<Text> { continuation ->
+                recognizer.process(image)
+                    .addOnSuccessListener { text ->
+                        if (continuation.isActive) continuation.resume(text)
+                    }
+                    .addOnFailureListener { error ->
+                        if (continuation.isActive) continuation.resumeWithException(error)
+                    }
+            }
+
             val blocks = result.textBlocks
             if (blocks.isEmpty()) {
                 return ""
             }
-            
+
             val stringBuilder = StringBuilder()
             for (block in blocks) {
-                val blockText = block.text
-                stringBuilder.append(blockText).append("\n")
-                
-                // Also process lines for better formatting
+                stringBuilder.append(block.text).append("\\n")
                 for (line in block.lines) {
-                    stringBuilder.append(line.text).append("\n")
+                    stringBuilder.append(line.text).append("\\n")
                 }
             }
-            
             stringBuilder.toString().trim()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to recognize text from bitmap", e)
             ""
         }
     }
-    
+
     /**
      * Process OCR text to extract question and options separately
      * This ALWAYS picks the LAST 4 options regardless of their labels

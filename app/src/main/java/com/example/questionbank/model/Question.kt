@@ -2,11 +2,13 @@ package com.example.questionbank.model
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 
 @Entity(
     tableName = "questions",
+    indices = [Index(value = ["vaultId"])],
     foreignKeys = [
         ForeignKey(
             entity = Vault::class,

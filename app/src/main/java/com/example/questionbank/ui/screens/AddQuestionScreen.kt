@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
+import android.provider.MediaStore
 import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -364,7 +365,7 @@ fun AddQuestionScreen(
                         )
                         cropperLauncher.launch(cropOptions)
                     },
-                    onRemoveDiagram = { viewModel.setDiagramUri(null) }
+                    onRemoveDiagram = { viewModel.setDiagramUri(context, null) }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }

@@ -394,6 +394,12 @@ class AddQuestionViewModel(
             .put("model", "gemini-3.8-flash")
             .put("input", input)
             .put("background", true)
+        val created = executeGeminiRequest(
+            url = URL("https://generativelanguage.googleapis.com/v1beta/interactions"),
+            apiKey = apiKey,
+            method = "POST",
+            body = createBody.toString()
+        )
         val interactionId = created.optString("id")
         val initialStatus = created.optString("status")
 

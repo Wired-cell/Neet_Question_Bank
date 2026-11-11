@@ -128,7 +128,7 @@ object OcrUtils {
 
         // OCR line boxes are often split at the printed page's line width.
         // A single space gives a readable paragraph and avoids false indentation.
-        val questionText = questionLines.joinToString(" ").replace(Regex("\s+"), " ").trim()
+        val questionText = questionLines.joinToString(" ").replace(Regex("\\s+"), " ").trim()
 
         val hasDiagram = lines.any { line ->
             line.contains("[image]", ignoreCase = true) ||

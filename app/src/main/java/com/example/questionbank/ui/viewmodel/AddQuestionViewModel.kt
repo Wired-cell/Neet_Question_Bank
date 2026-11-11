@@ -19,6 +19,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import java.io.File
 import java.io.FileOutputStream
 
@@ -292,18 +297,93 @@ class AddQuestionViewModel(
         }
     }
     
-    fun fetchExplanation(query: String) {
+    fun fetchExplanation(query: String, context: Context) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // This would call Google AI Studio API
-                // For now, we'll just set a placeholder
-                _explanation.value = "Explanation for: $query\n\nThis would be fetched from Google AI Studio using the API key from settings."
+                val apiKey = context.applicationContext
+                    .getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                    .getString("google_ai_key", "")
+                    ?.trim()
+                    .orEmpty()
+                if (apiKey.isBlank()) {
+                    _explanation.value = "Please add your Google AI Studio API key in Settings, then try again."
+                    return@launch
+                }
+                if (query.isBlank()) {
+                    _explanation.value = "Please enter a question before requesting an explanation."
+                    return@launch
+                }
+                _explanation.value = withContext(Dispatchers.IO) {
+                    requestGeminiExplanation(apiKey, query)
+                }
             } catch (e: Exception) {
                 Log.e("AddQuestionViewModel", "Failed to fetch explanation", e)
+                _explanation.value = "Could not fetch an explanation: ${e.message ?: "Unknown error"}. Check your API key and internet connection."
             } finally {
                 _isLoading.value = false
             }
+        }
+    }
+
+    private fun requestGeminiExplanation(apiKey: String, question: String): String {
+        val endpoint = URL(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" +
+                java.net.URLEncoder.encode(apiKey, "UTF-8")
+        )
+        val connection = (endpoint.openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 20000
+            readTimeout = 60000
+            doOutput = true
+            setRequestProperty("Content-Type", "application/json; charset=utf-8")
+        }
+        try {
+            val prompt = """
+                You are a careful physics and science tutor. Explain the following question step by step.
+                Identify the relevant concepts, define variables, show equations and substitutions,
+                calculate the answer where possible, and state the correct option if options are supplied.
+                Do not invent missing diagram details. If the diagram is needed but not described,
+                clearly state what information is missing.
+                
+                Question:
+                $question
+            """.trimIndent()
+            val body = JSONObject()
+                .put("contents", org.json.JSONArray().put(
+                    JSONObject().put("role", "user").put(
+                        "parts", org.json.JSONArray().put(JSONObject().put("text", prompt))
+                    )
+                ))
+                .put("generationConfig", JSONObject().put("temperature", 0.25).put("maxOutputTokens", 2048))
+            connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            val status = connection.responseCode
+            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+            val responseText = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            val response = JSONObject(responseText)
+            if (status !in 200..299) {
+                val message = response.optJSONObject("error")?.optString("message")
+                    ?: "Google AI Studio returned HTTP $status"
+                throw IllegalStateException(message)
+            }
+            val candidates = response.optJSONArray("candidates")
+                ?: throw IllegalStateException("The AI returned no explanation. Check API access and model availability.")
+            val parts = candidates.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")
+                ?: throw IllegalStateException("The AI response did not contain explanation text.")
+            val answer = buildString {
+                for (i in 0 until parts.length()) {
+                    val part = parts.optJSONObject(i)
+                    val text = part?.optString("text").orEmpty()
+                    if (text.isNotBlank()) {
+                        if (isNotEmpty()) append("\n")
+                        append(text)
+                    }
+                }
+            }.trim()
+            if (answer.isBlank()) throw IllegalStateException("The AI returned an empty explanation.")
+            return answer
+        } finally {
+            connection.disconnect()
         }
     }
     

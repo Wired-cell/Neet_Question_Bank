@@ -19,15 +19,12 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -77,7 +74,6 @@ fun VaultListScreen(
     val vaults by viewModel.vaults.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     
-    var showMenu by remember { mutableStateOf(false) }
     
     Scaffold(
         topBar = {
@@ -102,21 +98,6 @@ fun VaultListScreen(
                     }
                     IconButton(onClick = { onNavigateToSettings() }) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
-                    }
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Menu")
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Add Vault") },
-                            onClick = { 
-                                showMenu = false
-                                // TODO: Add vault dialog
-                            }
-                        )
                     }
                 }
             )
@@ -160,9 +141,9 @@ fun VaultListScreen(
             VaultHierarchyList(
                 vaults = vaults,
                 onVaultClick = { vault ->
-                    if (vault.isSubSubject) {
-                        onNavigateToQuestionList(vault.id)
-                    }
+                    // Open the question list for leaf root vaults such as Physics,
+                    // as well as sub-vaults such as Chemistry and Biology categories.
+                    onNavigateToQuestionList(vault.id)
                 },
                 onAddQuestionClick = { vaultId ->
                     onNavigateToAddQuestion(vaultId)

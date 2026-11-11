@@ -136,11 +136,11 @@ fun AddQuestionScreen(
     val diagramUri by viewModel.diagramUri.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
+    val isFetchingExplanation by viewModel.isFetchingExplanation.collectAsState()
     
     var showVaultDialog by remember { mutableStateOf(false) }
     var showImageSourceDialog by remember { mutableStateOf(false) }
     var showCropDialog by remember { mutableStateOf(false) }
-    var showExplanationDialog by remember { mutableStateOf(false) }
     
     // Camera and gallery launchers
     val cameraLauncher = rememberLauncherForActivityResult(
@@ -376,8 +376,9 @@ fun AddQuestionScreen(
             // Explanation Section
             ExplanationSection(
                 explanation = explanation,
+                isFetching = isFetchingExplanation,
                 onExplanationChange = viewModel::setExplanation,
-                onFetchClick = { showExplanationDialog = true }
+                onFetchClick = { viewModel.fetchExplanation(questionText, context) }
             )
             
             Spacer(modifier = Modifier.height(24.dp))
@@ -431,17 +432,6 @@ fun AddQuestionScreen(
             )
         }
         
-        // Explanation Fetch Dialog
-        if (showExplanationDialog) {
-            ExplanationFetchDialog(
-                questionText = questionText,
-                onFetch = { query ->
-                    viewModel.fetchExplanation(query, context)
-                    showExplanationDialog = false
-                },
-                onDismiss = { showExplanationDialog = false }
-            )
-        }
     }
 }
 
@@ -1112,6 +1102,7 @@ fun DiagramSection(
 @Composable
 fun ExplanationSection(
     explanation: String,
+    isFetching: Boolean,
     onExplanationChange: (String) -> Unit,
     onFetchClick: () -> Unit
 ) {
@@ -1128,10 +1119,17 @@ fun ExplanationSection(
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.weight(1f))
-            FilledTonalButton(onClick = onFetchClick) {
-                Icon(Icons.Default.Info, contentDescription = "Fetch")
+            FilledTonalButton(onClick = onFetchClick, enabled = !isFetching) {
+                if (isFetching) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(Icons.Default.Info, contentDescription = "Fetch solution")
+                }
                 Spacer(modifier = Modifier.size(4.dp))
-                Text("Fetch")
+                Text(if (isFetching) "Generating..." else "Fetch solution")
             }
         }
         Spacer(modifier = Modifier.height(8.dp))

@@ -74,14 +74,13 @@ object OcrUtils {
                 return ""
             }
 
-            val stringBuilder = StringBuilder()
-            for (block in blocks) {
-                stringBuilder.append(block.text).append('\n')
-                for (line in block.lines) {
-                    stringBuilder.append(line.text).append('\n')
-                }
-            }
-            stringBuilder.toString().trim()
+            // ML Kit's block.text already contains the block's lines. Appending both
+            // block.text and line.text duplicated every recognized sentence.
+            val seen = linkedSetOf<String>()
+            val orderedLines = blocks.flatMap { block ->
+                block.lines.map { line -> line.text.trim() }
+            }.filter { it.isNotBlank() && seen.add(it) }
+            orderedLines.joinToString("\n")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to recognize text from bitmap", e)
             ""

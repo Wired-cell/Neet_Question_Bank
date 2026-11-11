@@ -328,8 +328,7 @@ class AddQuestionViewModel(
 
     private fun requestGeminiExplanation(apiKey: String, question: String): String {
         val endpoint = URL(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" +
-                java.net.URLEncoder.encode(apiKey, "UTF-8")
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
         )
         val connection = (endpoint.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
@@ -337,6 +336,7 @@ class AddQuestionViewModel(
             readTimeout = 60000
             doOutput = true
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            setRequestProperty("x-goog-api-key", apiKey)
         }
         try {
             val prompt = """

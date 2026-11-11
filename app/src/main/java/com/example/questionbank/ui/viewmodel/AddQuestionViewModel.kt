@@ -327,9 +327,7 @@ class AddQuestionViewModel(
     }
 
     private fun requestGeminiExplanation(apiKey: String, question: String): String {
-        val endpoint = URL(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
-        )
+        val endpoint = URL("https://generativelanguage.googleapis.com/v1beta/interactions")
         val connection = (endpoint.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             connectTimeout = 20000
@@ -345,17 +343,14 @@ class AddQuestionViewModel(
                 calculate the answer where possible, and state the correct option if options are supplied.
                 Do not invent missing diagram details. If the diagram is needed but not described,
                 clearly state what information is missing.
-                
+
                 Question:
                 $question
             """.trimIndent()
             val body = JSONObject()
-                .put("contents", org.json.JSONArray().put(
-                    JSONObject().put("role", "user").put(
-                        "parts", org.json.JSONArray().put(JSONObject().put("text", prompt))
-                    )
-                ))
-                .put("generationConfig", JSONObject().put("temperature", 0.25).put("maxOutputTokens", 2048))
+                .put("model", "gemini-3.8-flash")
+                .put("input", prompt)
+                .put("generation_config", JSONObject().put("max_output_tokens", 2048))
             connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             val status = connection.responseCode
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
@@ -363,30 +358,44 @@ class AddQuestionViewModel(
             val response = JSONObject(responseText)
             if (status !in 200..299) {
                 val message = response.optJSONObject("error")?.optString("message")
+                    ?.takeIf { it.isNotBlank() }
                     ?: "Google AI Studio returned HTTP $status"
                 throw IllegalStateException(message)
             }
-            val candidates = response.optJSONArray("candidates")
-                ?: throw IllegalStateException("The AI returned no explanation. Check API access and model availability.")
-            val parts = candidates.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")
-                ?: throw IllegalStateException("The AI response did not contain explanation text.")
+
+            // Interactions API returns generated text in steps[].content[].
+            // Accept a wrapped interaction too, for compatibility with response envelopes.
+            val interaction = response.optJSONObject("interaction") ?: response
+            val steps = interaction.optJSONArray("steps")
+                ?: throw IllegalStateException("The AI response did not contain interaction steps.")
             val answer = buildString {
-                for (i in 0 until parts.length()) {
-                    val part = parts.optJSONObject(i)
-                    val text = part?.optString("text").orEmpty()
-                    if (text.isNotBlank()) {
-                        if (isNotEmpty()) append("\n")
-                        append(text)
+                for (stepIndex in 0 until steps.length()) {
+                    val step = steps.optJSONObject(stepIndex) ?: continue
+                    if (step.optString("type") != "model_output") continue
+                    val content = step.optJSONArray("content") ?: continue
+                    for (contentIndex in 0 until content.length()) {
+                        val item = content.optJSONObject(contentIndex) ?: continue
+                        val text = item.optString("text")
+                        if (item.optString("type") == "text" && text.isNotBlank()) {
+                            if (isNotEmpty()) append("\\n")
+                            append(text)
+                        }
                     }
                 }
             }.trim()
-            if (answer.isBlank()) throw IllegalStateException("The AI returned an empty explanation.")
+            if (answer.isBlank()) {
+                val state = interaction.optString("status")
+                throw IllegalStateException(
+                    if (state.isNotBlank()) "Gemini completed with status '$state' but returned no text."
+                    else "The AI returned an empty explanation."
+                )
+            }
             return answer
         } finally {
             connection.disconnect()
         }
     }
-    
+
     fun canSave(): Boolean {
         return _questionText.value.isNotBlank() && 
                _selectedVault.value != null &&

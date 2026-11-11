@@ -95,13 +95,13 @@ object OcrUtils {
     fun processOcrText(fullText: String): OcrResult {
         // Normalize OCR output: remove repeated lines and whitespace-only differences.
         val lines = fullText.lineSequence()
-            .map { it.replace(Regex("\\s+"), " ").trim() }
+            .map { it.replace(Regex("\s+"), " ").trim() }
             .filter { it.isNotBlank() }
             .distinct()
             .toList()
 
         // Only explicit numbered/lettered answer markers start an option.
-        val optionStart = Regex("""^\\s*(?:\\(?[1-4]\\s*[).]|[A-Da-d]\\s*[).])\\s*\\S.*$""")
+        val optionStart = Regex("""^\s*(?:\\(?[1-4]\s*[).]|[A-Da-d]\s*[).])\s*\\S.*$""")
         val firstOption = lines.indexOfFirst { optionStart.matches(it) }
         val questionLines = if (firstOption >= 0) lines.take(firstOption) else lines
         val optionLines = if (firstOption >= 0) lines.drop(firstOption) else emptyList()
@@ -120,7 +120,7 @@ object OcrUtils {
 
         val cleanedOptions = groupedOptions.take(4).mapIndexed { index, option ->
             val content = option.replace(
-                Regex("""^\\s*(?:\\(?[1-4]\\s*[).]|[A-Da-d]\\s*[).])\\s*"""),
+                Regex("""^\s*(?:\\(?[1-4]\s*[).]|[A-Da-d]\s*[).])\s*"""),
                 ""
             ).trim()
             "${('A' + index)}. $content"
@@ -128,7 +128,7 @@ object OcrUtils {
 
         // OCR line boxes are often split at the printed page's line width.
         // A single space gives a readable paragraph and avoids false indentation.
-        val questionText = questionLines.joinToString(" ").replace(Regex("\\s+"), " ").trim()
+        val questionText = questionLines.joinToString(" ").replace(Regex("\s+"), " ").trim()
 
         val hasDiagram = lines.any { line ->
             line.contains("[image]", ignoreCase = true) ||
@@ -138,7 +138,7 @@ object OcrUtils {
         }
 
         return OcrResult(
-            fullText = lines.joinToString("\\n"),
+            fullText = lines.joinToString("\n"),
             questionText = questionText,
             options = cleanedOptions,
             hasDiagram = hasDiagram
@@ -189,7 +189,7 @@ object OcrUtils {
      */
     fun postProcessMathText(text: String): String {
         return text
-            .replace("√", "\\sqrt")
+            .replace("√", "\sqrt")
             .replace("²", "^2")
             .replace("³", "^3")
             .replace("→", "->")

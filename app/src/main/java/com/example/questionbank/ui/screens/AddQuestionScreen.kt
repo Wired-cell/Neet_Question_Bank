@@ -1003,7 +1003,7 @@ fun OptionItem(
                 value = option,
                 onValueChange = onOptionChange,
                 modifier = Modifier.weight(1f),
-                textStyle = MaterialTheme.typography.bodyLarge
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
             )
             IconButton(onClick = onRemove) {
                 Icon(Icons.Default.Delete, contentDescription = "Remove")

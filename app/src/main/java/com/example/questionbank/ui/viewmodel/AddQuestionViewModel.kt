@@ -214,26 +214,31 @@ class AddQuestionViewModel(
     }
 
     fun migrateExistingImagesToPrivateStorage(context: Context) {
-        if (questionId == null) return
         viewModelScope.launch {
             try {
-                val question = questionDao.getQuestionById(questionId).first() ?: return@launch
-                val image = question.imageUri?.let(Uri::parse)
-                val diagram = question.diagramUri?.let(Uri::parse)
-                if (image != null) {
-                    _imageUri.value = withContext(Dispatchers.IO) {
-                        val cached = copyImageToCache(context, image)
-                        deleteManagedImage(context, image)
-                        cached
-                    }
+                // Keep only files referenced as diagrams. Original full-page images
+                // from older app versions are permanently removed from app storage.
+                val questions = questionDao.getAllQuestionsOnce()
+                val retainedDiagramUris = questions.mapNotNull { it.diagramUri }.toSet()
+                val imageDirectory = File(context.filesDir, "question_images")
+                imageDirectory.listFiles()?.forEach { file ->
+                    val fileUri = Uri.fromFile(file).toString()
+                    if (fileUri !in retainedDiagramUris) file.delete()
                 }
-                if (diagram != null) {
-                    _diagramUri.value = withContext(Dispatchers.IO) {
-                        persistImageInAppStorage(context, diagram)
+                questionDao.clearOriginalImageUris()
+
+                if (questionId != null) {
+                    val question = questions.firstOrNull { it.id == questionId }
+                    _imageUri.value = null
+                    val diagram = question?.diagramUri?.let(Uri::parse)
+                    if (diagram != null) {
+                        _diagramUri.value = withContext(Dispatchers.IO) {
+                            persistImageInAppStorage(context, diagram)
+                        }
                     }
                 }
             } catch (e: Exception) {
-                Log.e("AddQuestionViewModel", "Could not migrate existing question images", e)
+                Log.e("AddQuestionViewModel", "Could not clean up legacy original images", e)
             }
         }
     }

@@ -185,7 +185,7 @@ class AddQuestionViewModel(
     fun setDiagramUri(context: Context, uri: Uri?) {
         val previous = _diagramUri.value
         _diagramUri.value = uri
-        if (uri == null) deleteManagedImage(context, previous)
+        if (previous != uri) deleteManagedImage(context, previous)
     }
 
     fun importDiagramImage(context: Context, sourceUri: Uri?) {
@@ -197,7 +197,11 @@ class AddQuestionViewModel(
                 val savedDiagram = withContext(Dispatchers.IO) {
                     persistImageInAppStorage(context, sourceUri)
                 }
+                val previousDiagram = _diagramUri.value
                 _diagramUri.value = savedDiagram
+                if (previousDiagram != savedDiagram) {
+                    withContext(Dispatchers.IO) { deleteManagedImage(context, previousDiagram) }
+                }
                 deleteTemporaryImage(_imageUri.value)
                 _imageUri.value = null
             } catch (e: Exception) {

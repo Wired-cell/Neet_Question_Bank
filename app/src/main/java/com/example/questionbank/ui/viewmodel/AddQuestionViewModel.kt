@@ -2,6 +2,7 @@ package com.example.questionbank.ui.viewmodel
 
 import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -173,6 +174,7 @@ class AddQuestionViewModel(
                     copyImageToCache(context, sourceUri)
                 }
                 if (previous != savedUri) deleteTemporaryImage(previous)
+                withContext(Dispatchers.IO) { deleteCameraCapture(context, sourceUri) }
                 _imageUri.value = savedUri
                 processImage(context, savedUri)
             } catch (e: Exception) {
@@ -255,6 +257,22 @@ class AddQuestionViewModel(
             destination.outputStream().use { output -> input.copyTo(output) }
         } ?: throw java.io.IOException("Could not read the selected image.")
         return Uri.fromFile(destination)
+    }
+
+    private fun deleteCameraCapture(context: Context, uri: Uri) {
+        if (uri.scheme != "content" || uri.authority != "${context.packageName}.fileprovider") return
+        val displayName = context.contentResolver.query(
+            uri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0) else null
+        }
+        if (displayName?.startsWith("question_bank_") == true) {
+            File(context.cacheDir, displayName).delete()
+        }
     }
 
     private fun deleteTemporaryImage(uri: Uri?) {

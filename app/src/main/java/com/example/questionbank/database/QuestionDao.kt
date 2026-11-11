@@ -28,6 +28,12 @@ interface QuestionDao {
     @Query("SELECT * FROM questions ORDER BY createdAt DESC")
     fun getAllQuestions(): Flow<List<Question>>
 
+    @Query("SELECT * FROM questions")
+    suspend fun getAllQuestionsOnce(): List<Question>
+
+    @Query("UPDATE questions SET imageUri = NULL WHERE imageUri IS NOT NULL")
+    suspend fun clearOriginalImageUris()
+
     @Query("SELECT * FROM questions WHERE vaultId IN (SELECT id FROM vaults WHERE parentId = :parentId) ORDER BY createdAt DESC")
     fun getQuestionsByParentVault(parentId: Long): Flow<List<Question>>
 

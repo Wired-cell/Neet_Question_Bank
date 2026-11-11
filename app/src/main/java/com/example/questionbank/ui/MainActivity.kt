@@ -25,15 +25,19 @@ class MainActivity : ComponentActivity() {
         val preferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
         setContent {
             var darkTheme by remember { mutableStateOf(preferences.getBoolean("dark_theme", true)) }
-            QuestionBankTheme(darkTheme = darkTheme) {
+            var darcula by remember { mutableStateOf(preferences.getBoolean("darcula_theme", false)) }
+            QuestionBankTheme(darkTheme = darkTheme, darcula = darcula) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation(vaultDao, questionDao, darkTheme) { enabled ->
+                    AppNavigation(vaultDao, questionDao, darkTheme, darcula, { enabled ->
                         darkTheme = enabled
                         preferences.edit().putBoolean("dark_theme", enabled).apply()
-                    }
+                    }, onDarculaChange = { enabled ->
+                        darcula = enabled
+                        preferences.edit().putBoolean("darcula_theme", enabled).apply()
+                    })
                 }
             }
         }

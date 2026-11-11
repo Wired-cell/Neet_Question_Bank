@@ -85,6 +85,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -855,6 +858,14 @@ fun DiagramPreviewCard(
                         bitmap = bmp.asImageBitmap(),
                         contentDescription = "Diagram",
                         contentScale = ContentScale.Fit,
+                        colorFilter = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) {
+                            ColorFilter.colorMatrix(ColorMatrix(floatArrayOf(
+                                -1f, 0f, 0f, 0f, 255f,
+                                0f, -1f, 0f, 0f, 255f,
+                                0f, 0f, -1f, 0f, 255f,
+                                0f, 0f, 0f, 1f, 0f
+                            )))
+                        } else null,
                         modifier = Modifier.fillMaxSize()
                     )
                 }

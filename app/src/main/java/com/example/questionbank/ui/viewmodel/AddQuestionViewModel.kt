@@ -319,9 +319,18 @@ class AddQuestionViewModel(
                 _explanation.value = withContext(Dispatchers.IO) {
                     requestGeminiExplanation(apiKey, query)
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e("AddQuestionViewModel", "Failed to fetch explanation", e)
-                _explanation.value = "Could not fetch an explanation: ${e.message ?: "Unknown error"}. Check your API key and internet connection."
+                _explanation.value = when (e) {
+                    is java.net.SocketTimeoutException ->
+                        "Gemini took too long to respond. Your question may still be processing; please try Fetch Solution again."
+                    is java.net.SocketException, is java.io.IOException ->
+                        "The connection to Google's AI service was interrupted. This is not necessarily a Wi-Fi or API-key problem. Please try again."
+                    else ->
+                        "Could not fetch an explanation: ${e.message ?: "Unknown error"}"
+                }
             } finally {
                 _isFetchingExplanation.value = false
             }
@@ -329,34 +338,102 @@ class AddQuestionViewModel(
     }
 
     private fun requestGeminiExplanation(apiKey: String, question: String): String {
-        val endpoint = URL("https://generativelanguage.googleapis.com/v1beta/interactions")
-        val connection = (endpoint.openConnection() as HttpURLConnection).apply {
-            requestMethod = "POST"
-            connectTimeout = 20000
-            readTimeout = 60000
-            doOutput = true
-            setRequestProperty("Content-Type", "application/json; charset=utf-8")
-            setRequestProperty("x-goog-api-key", apiKey)
-        }
-        try {
-            val prompt = """
-                You are a careful physics and science tutor. Explain the following question step by step.
-                Identify the relevant concepts, define variables, show equations and substitutions,
-                calculate the answer where possible, and state the correct option if options are supplied.
-                Do not invent missing diagram details. If the diagram is needed but not described,
-                clearly state what information is missing.
+        val prompt = """
+            You are a careful physics and science tutor. Explain the following question step by step.
+            Identify the relevant concepts, define variables, show equations and substitutions,
+            calculate the answer where possible, and state the correct option if options are supplied.
+            Do not invent missing diagram details. If the diagram is needed but not described,
+            clearly state what information is missing.
 
-                Question:
-                $question
-            """.trimIndent()
-            val body = JSONObject()
-                .put("model", "gemini-3.8-flash")
-                .put("input", prompt)
-                .put("generation_config", JSONObject().put("max_output_tokens", 2048))
-            connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            Question:
+            $question
+        """.trimIndent()
+
+        // Run the model in Google's background mode so the phone does not have to
+        // hold one long HTTP connection open while Gemini is thinking.
+        val createBody = JSONObject()
+            .put("model", "gemini-3.8-flash")
+            .put("input", prompt)
+            .put("background", true)
+
+        val created = executeGeminiRequest(
+            url = URL("https://generativelanguage.googleapis.com/v1beta/interactions"),
+            apiKey = apiKey,
+            method = "POST",
+            body = createBody.toString()
+        )
+        val interactionId = created.optString("id")
+        val initialStatus = created.optString("status")
+
+        if (initialStatus == "completed") return extractGeminiText(created)
+        if (initialStatus == "failed" || initialStatus == "cancelled" || initialStatus == "incomplete") {
+            throw IllegalStateException("Gemini ended the request with status '$initialStatus'.")
+        }
+        if (interactionId.isBlank()) {
+            throw IllegalStateException("Google accepted the request but did not return an interaction ID.")
+        }
+
+        // Poll with short independent requests. A brief socket reset no longer
+        // destroys the whole generation; the model continues on Google's servers.
+        repeat(30) {
+            Thread.sleep(2000)
+            val current = try {
+                executeGeminiRequest(
+                    url = URL("https://generativelanguage.googleapis.com/v1beta/interactions/$interactionId"),
+                    apiKey = apiKey,
+                    method = "GET"
+                )
+            } catch (e: java.io.IOException) {
+                Log.w("AddQuestionViewModel", "Temporary connection issue while checking Gemini; will retry", e)
+                return@repeat
+            }
+
+            when (val status = current.optString("status")) {
+                "completed" -> return extractGeminiText(current)
+                "failed", "cancelled", "incomplete", "budget_exceeded" ->
+                    throw IllegalStateException("Gemini finished with status '$status'.")
+            }
+        }
+
+        throw java.net.SocketTimeoutException(
+            "Gemini is still processing this question after 60 seconds. Please try again in a moment."
+        )
+    }
+
+    private fun executeGeminiRequest(
+        url: URL,
+        apiKey: String,
+        method: String,
+        body: String? = null
+    ): JSONObject {
+        val connection = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = method
+            connectTimeout = 8000
+            readTimeout = 12000
+            useCaches = false
+            setRequestProperty("Connection", "close")
+            setRequestProperty("x-goog-api-key", apiKey)
+            setRequestProperty("Api-Revision", "2026-05-20")
+            setRequestProperty("Accept", "application/json")
+            if (body != null) {
+                doOutput = true
+                setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            }
+        }
+
+        try {
+            if (body != null) {
+                val bytes = body.toByteArray(Charsets.UTF_8)
+                connection.setFixedLengthStreamingMode(bytes.size)
+                connection.outputStream.use { it.write(bytes) }
+            }
+
             val status = connection.responseCode
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
             val responseText = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (responseText.isBlank()) {
+                throw java.io.IOException("Google returned an empty response (HTTP $status).")
+            }
             val response = JSONObject(responseText)
             if (status !in 200..299) {
                 val message = response.optJSONObject("error")?.optString("message")
@@ -364,38 +441,34 @@ class AddQuestionViewModel(
                     ?: "Google AI Studio returned HTTP $status"
                 throw IllegalStateException(message)
             }
-
-            // Interactions API returns generated text in steps[].content[].
-            // Accept a wrapped interaction too, for compatibility with response envelopes.
-            val interaction = response.optJSONObject("interaction") ?: response
-            val steps = interaction.optJSONArray("steps")
-                ?: throw IllegalStateException("The AI response did not contain interaction steps.")
-            val answer = buildString {
-                for (stepIndex in 0 until steps.length()) {
-                    val step = steps.optJSONObject(stepIndex) ?: continue
-                    if (step.optString("type") != "model_output") continue
-                    val content = step.optJSONArray("content") ?: continue
-                    for (contentIndex in 0 until content.length()) {
-                        val item = content.optJSONObject(contentIndex) ?: continue
-                        val text = item.optString("text")
-                        if (item.optString("type") == "text" && text.isNotBlank()) {
-                            if (isNotEmpty()) append("\\n")
-                            append(text)
-                        }
-                    }
-                }
-            }.trim()
-            if (answer.isBlank()) {
-                val state = interaction.optString("status")
-                throw IllegalStateException(
-                    if (state.isNotBlank()) "Gemini completed with status '$state' but returned no text."
-                    else "The AI returned an empty explanation."
-                )
-            }
-            return answer
+            return response
         } finally {
             connection.disconnect()
         }
+    }
+
+    private fun extractGeminiText(interaction: JSONObject): String {
+        val steps = interaction.optJSONArray("steps")
+            ?: throw IllegalStateException("Gemini completed without returning any output steps.")
+        val answer = buildString {
+            for (stepIndex in 0 until steps.length()) {
+                val step = steps.optJSONObject(stepIndex) ?: continue
+                if (step.optString("type") != "model_output") continue
+                val content = step.optJSONArray("content") ?: continue
+                for (contentIndex in 0 until content.length()) {
+                    val item = content.optJSONObject(contentIndex) ?: continue
+                    val text = item.optString("text")
+                    if (item.optString("type") == "text" && text.isNotBlank()) {
+                        if (isNotEmpty()) append("\n")
+                        append(text)
+                    }
+                }
+            }
+        }.trim()
+        if (answer.isBlank()) {
+            throw IllegalStateException("Gemini completed the request but returned no text explanation.")
+        }
+        return answer
     }
 
     fun canSave(): Boolean {

@@ -388,7 +388,7 @@ fun AddQuestionScreen(
                             }
                         }
                     }
-                    viewModel.fetchExplanation(questionWithOptions, context)
+                    viewModel.fetchExplanation(questionWithOptions, context, imageUri)
                 }
             )
             

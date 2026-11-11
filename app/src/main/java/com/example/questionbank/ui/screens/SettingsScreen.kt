@@ -20,6 +20,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,6 +37,8 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
+    darcula: Boolean,
+    onDarculaChange: (Boolean) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -69,7 +74,26 @@ fun SettingsScreen(
             )
             
             Spacer(modifier = Modifier.height(16.dp))
-            
+
+            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Turn Dark to Darcula", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Use near-black AMOLED surfaces while dark mode is enabled.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                        )
+                    }
+                    Switch(checked = darcula, onCheckedChange = onDarculaChange)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth()
             ) {

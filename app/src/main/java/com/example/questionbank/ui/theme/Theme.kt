@@ -30,9 +30,22 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun QuestionBankTheme(
     darkTheme: Boolean = true,
+    darcula: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val darculaScheme = darkColorScheme(
+        primary = androidx.compose.ui.graphics.Color(0xFFBB86FC),
+        secondary = androidx.compose.ui.graphics.Color(0xFF80CBC4),
+        tertiary = androidx.compose.ui.graphics.Color(0xFFCF6679),
+        background = androidx.compose.ui.graphics.Color.Black,
+        surface = androidx.compose.ui.graphics.Color(0xFF050505),
+        surfaceVariant = androidx.compose.ui.graphics.Color(0xFF171717)
+    )
+    val colorScheme = when {
+        !darkTheme -> LightColorScheme
+        darcula -> darculaScheme
+        else -> DarkColorScheme
+    }
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {

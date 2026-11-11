@@ -58,7 +58,18 @@ object OcrUtils {
         bitmap: Bitmap
     ): String {
         return try {
-            val image = InputImage.fromBitmap(bitmap, 0)
+            // Upscale smaller source images so raised math glyphs have more pixels.
+            val longestSide = maxOf(bitmap.width, bitmap.height)
+            val scale = if (longestSide < 2200) minOf(2f, 2200f / longestSide) else 1f
+            val ocrBitmap = if (scale > 1.05f) {
+                Bitmap.createScaledBitmap(
+                    bitmap,
+                    (bitmap.width * scale).toInt(),
+                    (bitmap.height * scale).toInt(),
+                    true
+                )
+            } else bitmap
+            val image = InputImage.fromBitmap(ocrBitmap, 0)
             val result = suspendCancellableCoroutine<Text> { continuation ->
                 recognizer.process(image)
                     .addOnSuccessListener { text ->
@@ -80,11 +91,20 @@ object OcrUtils {
             val orderedLines = blocks.flatMap { block ->
                 block.lines.map { line -> line.text.trim() }
             }.filter { it.isNotBlank() && seen.add(it) }
-            orderedLines.joinToString("\n")
+            restoreCommonUnitPowers(orderedLines.joinToString("\n"))
         } catch (e: Exception) {
             Log.e(TAG, "Failed to recognize text from bitmap", e)
             ""
         }
+    }
+
+    private fun restoreCommonUnitPowers(text: String): String {
+        // OCR can flatten a raised 2/3 into a baseline digit in common units.
+        return Regex("""(?i)\\b(m|cm|km)\\s*/\\s*s\\s*([23])\\b""")
+            .replace(text) { match ->
+                val power = if (match.groupValues[2] == "2") "²" else "³"
+                "\${match.groupValues[1]}/s$power"
+            }
     }
 
     /**
@@ -190,8 +210,6 @@ object OcrUtils {
     fun postProcessMathText(text: String): String {
         return text
             .replace("√", "sqrt")
-            .replace("²", "^2")
-            .replace("³", "^3")
             .replace("→", "->")
             .replace("←", "<-")
             .replace("≈", "~=")

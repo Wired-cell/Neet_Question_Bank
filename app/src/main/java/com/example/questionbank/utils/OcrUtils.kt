@@ -93,97 +93,58 @@ object OcrUtils {
      * (as per user requirement: "the options should be the last ones")
      */
     fun processOcrText(fullText: String): OcrResult {
-        val lines = fullText.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
-        
-        // Pattern to detect option-like lines
-        // Very permissive - matches anything that looks like it could be an option
-        val optionPattern = Regex(
-            """^(?:\d+[)\.]\s*|[A-Da-d][)\.]\s*|[\(]?\d+[\)]\s*).+"""
-        )
-        
-        val options = mutableListOf<String>()
-        var questionEndIndex = lines.size
-        
-        // ALWAYS look for the last 4 lines that look like options
-        // This handles the user's requirement: "the options should be the last ones"
-        if (lines.size >= 4) {
-            // Start from the end and work backwards
-            val candidates = mutableListOf<String>()
-            
-            for (i in lines.indices.reversed()) {
-                val line = lines[i]
-                // Accept any non-empty line as a potential option
-                // (user said "no matter their label" - so we take the last 4 non-empty lines)
-                if (line.isNotBlank()) {
-                    candidates.add(0, line) // Add at beginning to maintain order
-                    if (candidates.size >= 4) break
-                }
-            }
-            
-            if (candidates.size == 4) {
-                questionEndIndex = lines.size - 4
-                options.addAll(candidates)
-            } else if (candidates.size > 0) {
-                // If we found some but not 4, take what we have
-                questionEndIndex = lines.size - candidates.size
-                options.addAll(candidates)
+        // Normalize OCR output: remove repeated lines and whitespace-only differences.
+        val lines = fullText.lineSequence()
+            .map { it.replace(Regex("\\s+"), " ").trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .toList()
+
+        // Only explicit numbered/lettered answer markers start an option.
+        val optionStart = Regex("""^\\s*(?:\\(?[1-4]\\s*[).]|[A-Da-d]\\s*[).])\\s*\\S.*$""")
+        val firstOption = lines.indexOfFirst { optionStart.matches(it) }
+        val questionLines = if (firstOption >= 0) lines.take(firstOption) else lines
+        val optionLines = if (firstOption >= 0) lines.drop(firstOption) else emptyList()
+
+        // Join wrapped option lines into the preceding option instead of creating
+        // artificial indented/one-line paragraphs.
+        val groupedOptions = mutableListOf<String>()
+        optionLines.forEach { line ->
+            if (optionStart.matches(line) && groupedOptions.size < 4) {
+                groupedOptions.add(line)
+            } else if (groupedOptions.isNotEmpty()) {
+                groupedOptions[groupedOptions.lastIndex] =
+                    groupedOptions.last() + " " + line
             }
         }
-        
-        // If we didn't find 4 options at the bottom, try looking for any 4 option-like lines
-        if (options.size < 4) {
-            val allOptionLines = lines.filter { line ->
-                optionPattern.matches(line) || line.matches(Regex("""^[A-Da-d\d]+\)?\.?\s+.+"""))
-            }
-            
-            // Take the last 4 option-like lines
-            if (allOptionLines.size >= 4) {
-                options.clear()
-                options.addAll(allOptionLines.takeLast(4))
-                questionEndIndex = lines.indexOfLast { allOptionLines.takeLast(4).contains(it) }
-            }
+
+        val cleanedOptions = groupedOptions.take(4).mapIndexed { index, option ->
+            val content = option.replace(
+                Regex("""^\\s*(?:\\(?[1-4]\\s*[).]|[A-Da-d]\\s*[).])\\s*"""),
+                ""
+            ).trim()
+            "${('A' + index)}. $content"
         }
-        
-        // Extract question text (everything before the options)
-        val questionLines = if (questionEndIndex > 0 && questionEndIndex <= lines.size) {
-            lines.subList(0, questionEndIndex)
-        } else {
-            lines.toList()
-        }
-        
-        val questionText = questionLines.joinToString("\n").trim()
-        
-        // Clean up options - remove any numbering/lettering at the start
-        val cleanedOptions = options.mapIndexed { index, option ->
-            val cleaned = option
-                .replace(Regex("""^[\dA-Da-d]\)\s*"""), "")
-                .replace(Regex("""^[\dA-Da-d]\.\s*"""), "")
-                .replace(Regex("""^\(\d+\)\s*"""), "")
-                .replace(Regex("""^[ivxlCDM]+[)\.]\s*"""), "")  // Handle roman numerals like (i), (ii), etc.
-                .trim()
-            
-            // Add letter prefix (A, B, C, D)
-            val letter = ('A' + index).toString()
-            "$letter. $cleaned"
-        }
-        
-        // Check if there's likely a diagram
+
+        // OCR line boxes are often split at the printed page's line width.
+        // A single space gives a readable paragraph and avoids false indentation.
+        val questionText = questionLines.joinToString(" ").replace(Regex("\\s+"), " ").trim()
+
         val hasDiagram = lines.any { line ->
             line.contains("[image]", ignoreCase = true) ||
-            line.contains("figure", ignoreCase = true) ||
-            line.contains("diagram", ignoreCase = true) ||
-            line.contains("shown", ignoreCase = true) ||
-            line.contains("as shown", ignoreCase = true)
+                line.contains("figure", ignoreCase = true) ||
+                line.contains("diagram", ignoreCase = true) ||
+                line.contains("shown", ignoreCase = true)
         }
-        
+
         return OcrResult(
-            fullText = fullText,
+            fullText = lines.joinToString("\\n"),
             questionText = questionText,
-            options = cleanedOptions.take(4), // Ensure we only return up to 4 options
+            options = cleanedOptions,
             hasDiagram = hasDiagram
         )
     }
-    
+
     /**
      * Extract only the options from OCR text
      */

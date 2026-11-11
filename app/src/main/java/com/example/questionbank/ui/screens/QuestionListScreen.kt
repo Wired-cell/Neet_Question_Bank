@@ -53,6 +53,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import android.net.Uri
+import coil.compose.AsyncImage
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -288,25 +290,20 @@ fun QuestionCard(
                 }
             }
             
-            if (question.imageUri != null) {
+            val questionImage = question.imageUri?.takeIf { it.isNotBlank() }
+                ?: question.diagramUri?.takeIf { it.isNotBlank() }
+            if (questionImage != null) {
                 Spacer(modifier = Modifier.height(12.dp))
-                Box(
+                AsyncImage(
+                    model = Uri.parse(questionImage),
+                    contentDescription = "Question image or diagram",
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(16f / 9f)
                         .clip(MaterialTheme.shapes.medium)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    // Placeholder for image
-                    Icon(
-                        Icons.Default.Image,
-                        contentDescription = "Question Image",
-                        modifier = Modifier
-                            .size(48.dp)
-                            .align(Alignment.Center),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                    )
-                }
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentScale = ContentScale.Fit
+                )
             }
             
             if (question.explanation.isNotEmpty()) {

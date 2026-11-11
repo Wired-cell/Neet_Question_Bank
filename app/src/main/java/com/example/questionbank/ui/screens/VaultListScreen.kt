@@ -15,6 +15,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.MoreVert
@@ -35,6 +37,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -64,7 +69,9 @@ fun VaultListScreen(
     onNavigateToAddQuestion: (Long) -> Unit,
     onNavigateToQuestionList: (Long) -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToTestMode: () -> Unit
+    onNavigateToTestMode: () -> Unit,
+    darkTheme: Boolean,
+    onDarkThemeChange: (Boolean) -> Unit
 ) {
     val viewModel = remember { VaultViewModel(vaultDao) }
     val vaults by viewModel.vaults.collectAsState()
@@ -77,6 +84,22 @@ fun VaultListScreen(
             TopAppBar(
                 title = { Text("Question Bank", style = MaterialTheme.typography.headlineMedium) },
                 actions = {
+                    val themeRotation by animateFloatAsState(
+                        targetValue = if (darkTheme) 0f else 180f,
+                        animationSpec = tween(durationMillis = 420),
+                        label = "themeIconRotation"
+                    )
+                    IconButton(onClick = { onDarkThemeChange(!darkTheme) }) {
+                        Icon(
+                            imageVector = if (darkTheme) Icons.Default.DarkMode else Icons.Default.LightMode,
+                            contentDescription = if (darkTheme) "Switch to light theme" else "Switch to dark theme",
+                            modifier = Modifier.graphicsLayer {
+                                rotationZ = themeRotation
+                                scaleX = 0.82f + (kotlin.math.abs(themeRotation - 90f) / 500f)
+                                scaleY = scaleX
+                            }
+                        )
+                    }
                     IconButton(onClick = { onNavigateToSettings() }) {
                         Icon(Icons.Default.Settings, contentDescription = "Settings")
                     }

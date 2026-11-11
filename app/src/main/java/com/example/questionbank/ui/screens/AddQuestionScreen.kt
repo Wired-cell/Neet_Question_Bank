@@ -6,7 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Build
-import android.provider.MediaStore
+import android.graphics.BitmapFactory
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -37,7 +37,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddAPhoto
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
@@ -200,7 +200,7 @@ fun AddQuestionScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -295,7 +295,7 @@ fun AddQuestionScreen(
             if (diagramUri != null) {
                 DiagramPreviewCard(
                     diagramUri = diagramUri!!,
-                    onRemoveClick = { viewModel.setDiagramUri(null) }
+                    onRemoveClick = { viewModel.setDiagramUri(context, null) }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -384,7 +384,7 @@ fun AddQuestionScreen(
                             }
                         }
                     }
-                    viewModel.fetchExplanation(questionWithOptions, context, imageUri)
+                    viewModel.fetchExplanation(questionWithOptions, context, diagramUri)
                 }
             )
             
@@ -585,10 +585,7 @@ fun ImagePreviewCard(
                                 )
                             )
                         } else {
-                            MediaStore.Images.Media.getBitmap(
-                                context.contentResolver,
-                                imageUri!!
-                            )
+                            BitmapFactory.decodeStream(context.contentResolver.openInputStream(imageUri!!))
                         }
                     } catch (e: Exception) {
                         null
@@ -858,10 +855,7 @@ fun DiagramPreviewCard(
                                 )
                             )
                         } else {
-                            MediaStore.Images.Media.getBitmap(
-                                context.contentResolver,
-                                diagramUri!!
-                            )
+                            BitmapFactory.decodeStream(context.contentResolver.openInputStream(diagramUri!!))
                         }
                     } catch (e: Exception) {
                         null

@@ -436,7 +436,7 @@ fun AddQuestionScreen(
             ExplanationFetchDialog(
                 questionText = questionText,
                 onFetch = { query ->
-                    viewModel.fetchExplanation(query)
+                    viewModel.fetchExplanation(query, context)
                     showExplanationDialog = false
                 },
                 onDismiss = { showExplanationDialog = false }

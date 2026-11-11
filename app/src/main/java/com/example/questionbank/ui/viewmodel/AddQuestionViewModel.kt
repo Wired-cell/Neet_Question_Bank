@@ -548,10 +548,16 @@ class AddQuestionViewModel(
             throw IllegalStateException("Google accepted the request but did not return an interaction ID.")
         }
 
-        // Poll with short independent requests. A brief socket reset no longer
-        // destroys the whole generation; the model continues on Google's servers.
-        repeat(30) {
-            Thread.sleep(2000)
+        // Keep waiting on this same server-side interaction. Status GETs do not
+        // create another generation, so never resubmit the question just because
+        // the connection is slow or a status check temporarily fails.
+        val maxWaitMs = 10 * 60 * 1000L
+        val waitStartedAt = System.currentTimeMillis()
+        var pollIntervalMs = 5_000L
+
+        while (System.currentTimeMillis() - waitStartedAt < maxWaitMs) {
+            Thread.sleep(pollIntervalMs)
+
             val current = try {
                 executeGeminiRequest(
                     url = URL("https://generativelanguage.googleapis.com/v1beta/interactions/$interactionId"),
@@ -559,8 +565,9 @@ class AddQuestionViewModel(
                     method = "GET"
                 )
             } catch (e: java.io.IOException) {
-                Log.w("AddQuestionViewModel", "Temporary connection issue while checking Gemini; will retry", e)
-                return@repeat
+                Log.w("AddQuestionViewModel", "Temporary connection issue while checking Gemini; keeping the same interaction and retrying", e)
+                pollIntervalMs = (pollIntervalMs * 2).coerceAtMost(15_000L)
+                continue
             }
 
             when (val status = current.optString("status")) {
@@ -568,10 +575,13 @@ class AddQuestionViewModel(
                 "failed", "cancelled", "incomplete", "budget_exceeded" ->
                     throw IllegalStateException("Gemini finished with status '$status'.")
             }
+
+            // Gradually reduce polling frequency to avoid unnecessary status traffic.
+            pollIntervalMs = (pollIntervalMs * 2).coerceAtMost(15_000L)
         }
 
         throw java.net.SocketTimeoutException(
-            "Gemini is still processing this question after 60 seconds. Please try again in a moment."
+            "Gemini is still processing this question after 10 minutes. The request was not resubmitted; please check your connection and try again later."
         )
     }
 
@@ -583,8 +593,8 @@ class AddQuestionViewModel(
     ): JSONObject {
         val connection = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = method
-            connectTimeout = 8000
-            readTimeout = 12000
+            connectTimeout = 20_000
+            readTimeout = 30_000
             useCaches = false
             setRequestProperty("Connection", "close")
             setRequestProperty("x-goog-api-key", apiKey)

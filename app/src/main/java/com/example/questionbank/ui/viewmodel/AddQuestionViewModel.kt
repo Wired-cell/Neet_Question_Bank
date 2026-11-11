@@ -299,7 +299,7 @@ class AddQuestionViewModel(
         }
     }
     
-    fun fetchExplanation(query: String, context: Context) {
+    fun fetchExplanation(query: String, context: Context, sourceImageUri: Uri? = null) {
         viewModelScope.launch {
             _isFetchingExplanation.value = true
             try {
@@ -317,7 +317,7 @@ class AddQuestionViewModel(
                     return@launch
                 }
                 _explanation.value = withContext(Dispatchers.IO) {
-                    requestGeminiExplanation(apiKey, query)
+                    requestGeminiExplanation(apiKey, query, context, sourceImageUri)
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -337,31 +337,63 @@ class AddQuestionViewModel(
         }
     }
 
-    private fun requestGeminiExplanation(apiKey: String, question: String): String {
+    private fun requestGeminiExplanation(
+        apiKey: String,
+        question: String,
+        context: Context,
+        sourceImageUri: Uri?
+    ): String {
+        val imageInstruction = if (sourceImageUri == null) {
+            "No source image is attached. Solve using the question text below.\nQuestion text:\n$question"
+        } else {
+            "Use the attached original question photo or gallery image as the source of truth. It contains the full printed question, answer choices, mathematical notation and diagram."
+        }
         val prompt = """
-            You are a careful physics and science tutor. Explain the following question step by step.
-            Identify the relevant concepts, define variables, show equations and substitutions,
-            calculate the answer where possible, and state the correct option if options are supplied.
-            Do not invent missing diagram details. If the diagram is needed but not described,
-            clearly state what information is missing.
+            You are a careful physics and science tutor. Read the supplied question image yourself,
+            including every line of text, all answer choices, labels, units, mathematical notation,
+            and the complete diagram. Treat the image as the primary source. Do not rely on OCR
+            text or assume missing values from a textbook or familiar question. If a symbol, value,
+            or diagram detail is genuinely unreadable, say exactly what is unclear rather than guessing.
+            Solve the question step by step, define variables, show substitutions and calculations,
+            and clearly identify the correct option when possible.
 
-            Question:
-            $question
+            IMPORTANT OUTPUT FORMATTING:
+            The answer is displayed in a plain text field, not a LaTeX renderer. Do NOT use LaTeX,
+            dollar signs for math, Markdown, or commands such as \\( \\), \\[ \\], \\frac,
+            \\sqrt, \\times, or \\text. Write equations as readable plain text using Unicode
+            symbols: ×, ÷, √, =, ≈, ≤, ≥, Δ, θ, π, →, and superscripts/subscripts such as m²,
+            x₁, v₀, and 10⁻³. Put each equation on its own line. Use clear headings and numbered
+            steps without Markdown decoration.
+
+            $imageInstruction
         """.trimIndent()
 
-        // Run the model in Google's background mode so the phone does not have to
-        // hold one long HTTP connection open while Gemini is thinking.
+        // Attach the original image so Gemini can inspect diagrams and notation directly.
+        val input = org.json.JSONArray()
+            .put(JSONObject().put("type", "text").put("text", prompt))
+        if (sourceImageUri != null) {
+            val resolver = context.contentResolver
+            val imageBytes = resolver.openInputStream(sourceImageUri)?.use { it.readBytes() }
+                ?: throw java.io.IOException("Could not read the original question image.")
+            if (imageBytes.size > 14 * 1024 * 1024) {
+                throw IllegalStateException("The question image is too large to send. Please crop or resize it and try again.")
+            }
+            val mimeType = resolver.getType(sourceImageUri)
+                ?.takeIf { it.startsWith("image/") } ?: "image/jpeg"
+            val encodedImage = android.util.Base64.encodeToString(imageBytes, android.util.Base64.NO_WRAP)
+            input.put(
+                JSONObject()
+                    .put("type", "image")
+                    .put("mime_type", mimeType)
+                    .put("data", encodedImage)
+            )
+        }
+
+        // Background mode avoids holding one long HTTP connection open during generation.
         val createBody = JSONObject()
             .put("model", "gemini-3.8-flash")
-            .put("input", prompt)
+            .put("input", input)
             .put("background", true)
-
-        val created = executeGeminiRequest(
-            url = URL("https://generativelanguage.googleapis.com/v1beta/interactions"),
-            apiKey = apiKey,
-            method = "POST",
-            body = createBody.toString()
-        )
         val interactionId = created.optString("id")
         val initialStatus = created.optString("status")
 

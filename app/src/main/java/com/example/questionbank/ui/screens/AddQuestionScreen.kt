@@ -378,7 +378,18 @@ fun AddQuestionScreen(
                 explanation = explanation,
                 isFetching = isFetchingExplanation,
                 onExplanationChange = viewModel::setExplanation,
-                onFetchClick = { viewModel.fetchExplanation(questionText, context) }
+                onFetchClick = {
+                    val questionWithOptions = buildString {
+                        append(questionText)
+                        if (options.any { it.isNotBlank() }) {
+                            append("\n\nOptions:\n")
+                            options.forEachIndexed { index, option ->
+                                if (option.isNotBlank()) append("${'A' + index}. $option\n")
+                            }
+                        }
+                    }
+                    viewModel.fetchExplanation(questionWithOptions, context)
+                }
             )
             
             Spacer(modifier = Modifier.height(24.dp))

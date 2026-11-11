@@ -328,7 +328,7 @@ class AddQuestionViewModel(
 
     private fun requestGeminiExplanation(apiKey: String, question: String): String {
         val endpoint = URL(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
         )
         val connection = (endpoint.openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"

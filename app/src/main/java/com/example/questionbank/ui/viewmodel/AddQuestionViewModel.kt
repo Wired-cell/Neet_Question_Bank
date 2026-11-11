@@ -160,15 +160,19 @@ class AddQuestionViewModel(
     }
     
     fun setImageUri(uri: Uri?) {
+        val previous = _imageUri.value
         _imageUri.value = uri
+        if (uri == null) deleteTemporaryImage(previous)
     }
 
     fun importQuestionImage(context: Context, sourceUri: Uri) {
         viewModelScope.launch {
             try {
+                val previous = _imageUri.value
                 val savedUri = withContext(Dispatchers.IO) {
-                    persistImageInAppStorage(context, sourceUri)
+                    copyImageToCache(context, sourceUri)
                 }
+                if (previous != savedUri) deleteTemporaryImage(previous)
                 _imageUri.value = savedUri
                 processImage(context, savedUri)
             } catch (e: Exception) {
@@ -178,8 +182,10 @@ class AddQuestionViewModel(
         }
     }
 
-    fun setDiagramUri(uri: Uri?) {
+    fun setDiagramUri(context: Context, uri: Uri?) {
+        val previous = _diagramUri.value
         _diagramUri.value = uri
+        if (uri == null) deleteManagedImage(context, previous)
     }
 
     fun importDiagramImage(context: Context, sourceUri: Uri?) {
@@ -188,9 +194,12 @@ class AddQuestionViewModel(
             _cropperImageUri.value = null
             if (sourceUri == null) return@launch
             try {
-                _diagramUri.value = withContext(Dispatchers.IO) {
+                val savedDiagram = withContext(Dispatchers.IO) {
                     persistImageInAppStorage(context, sourceUri)
                 }
+                _diagramUri.value = savedDiagram
+                deleteTemporaryImage(_imageUri.value)
+                _imageUri.value = null
             } catch (e: Exception) {
                 Log.e("AddQuestionViewModel", "Could not import diagram image", e)
                 _diagramUri.value = sourceUri
@@ -207,7 +216,9 @@ class AddQuestionViewModel(
                 val diagram = question.diagramUri?.let(Uri::parse)
                 if (image != null) {
                     _imageUri.value = withContext(Dispatchers.IO) {
-                        persistImageInAppStorage(context, image)
+                        val cached = copyImageToCache(context, image)
+                        deleteManagedImage(context, image)
+                        cached
                     }
                 }
                 if (diagram != null) {
@@ -219,6 +230,42 @@ class AddQuestionViewModel(
                 Log.e("AddQuestionViewModel", "Could not migrate existing question images", e)
             }
         }
+    }
+
+    private fun copyImageToCache(context: Context, sourceUri: Uri): Uri {
+        if (sourceUri.scheme == "file" && sourceUri.path.orEmpty().startsWith(context.cacheDir.absolutePath)) {
+            return sourceUri
+        }
+        val extension = when (context.contentResolver.getType(sourceUri)) {
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            "image/gif" -> "gif"
+            else -> "jpg"
+        }
+        val directory = File(context.cacheDir, "question_source")
+        if (!directory.exists() && !directory.mkdirs()) {
+            throw java.io.IOException("Could not create temporary image storage.")
+        }
+        val destination = File(directory, "source_${java.util.UUID.randomUUID()}.$extension")
+        context.contentResolver.openInputStream(sourceUri)?.use { input ->
+            destination.outputStream().use { output -> input.copyTo(output) }
+        } ?: throw java.io.IOException("Could not read the selected image.")
+        return Uri.fromFile(destination)
+    }
+
+    private fun deleteTemporaryImage(uri: Uri?) {
+        if (uri?.scheme != "file") return
+        val file = uri.path?.let(::File) ?: return
+        val isAppTemporary = file.parentFile?.name == "question_source" ||
+            (file.parentFile?.name == "cache" && file.name.startsWith("question_bank_"))
+        if (isAppTemporary) file.delete()
+    }
+
+    private fun deleteManagedImage(context: Context, uri: Uri?) {
+        if (uri?.scheme != "file") return
+        val file = uri.path?.let(::File) ?: return
+        val managedDirectory = File(context.filesDir, "question_images").absolutePath
+        if (file.absolutePath.startsWith("$managedDirectory/")) file.delete()
     }
 
     private fun persistImageInAppStorage(context: Context, sourceUri: Uri): Uri {
@@ -404,18 +451,21 @@ class AddQuestionViewModel(
         sourceImageUri: Uri?
     ): String {
         val imageInstruction = if (sourceImageUri == null) {
-            "No source image is attached. Solve using the question text below.\nQuestion text:\n$question"
+            "No diagram image is attached. Solve using the saved question text and answer choices below."
         } else {
-            "Use the attached original question photo or gallery image as the source of truth. It contains the full printed question, answer choices, mathematical notation and diagram."
+            "Use the attached cropped diagram together with the saved and edited question text and answer choices below. The diagram is the only image source."
         }
         val prompt = """
-            You are a careful physics and science tutor. Read the supplied question image yourself,
-            including every line of text, all answer choices, labels, units, mathematical notation,
-            and the complete diagram. Treat the image as the primary source. Do not rely on OCR
-            text or assume missing values from a textbook or familiar question. If a symbol, value,
-            or diagram detail is genuinely unreadable, say exactly what is unclear rather than guessing.
-            Solve the question step by step, define variables, show substitutions and calculations,
-            and clearly identify the correct option when possible.
+            You are a careful physics and science tutor. Solve the user's saved and edited question text
+            and answer choices below, using the attached cropped diagram only as visual reference.
+            Read every visible label, arrow, unit, symbol, and geometric relationship in that diagram.
+            Do not infer missing values from a textbook or familiar question. If a diagram detail is
+            genuinely unreadable, say exactly what is unclear rather than guessing.
+            Solve step by step, define variables, show substitutions and calculations, and identify
+            the correct option when possible.
+
+            Saved and edited question text and answer choices:
+            $question
 
             IMPORTANT OUTPUT FORMATTING:
             The answer is displayed in a plain text field, not a LaTeX renderer. Do NOT use LaTeX,
@@ -428,15 +478,15 @@ class AddQuestionViewModel(
             $imageInstruction
         """.trimIndent()
 
-        // Attach the original image so Gemini can inspect diagrams and notation directly.
+        // Attach only the cropped diagram; the edited question text is sent separately.
         val input = org.json.JSONArray()
             .put(JSONObject().put("type", "text").put("text", prompt))
         if (sourceImageUri != null) {
             val resolver = context.contentResolver
             val imageBytes = resolver.openInputStream(sourceImageUri)?.use { it.readBytes() }
-                ?: throw java.io.IOException("Could not read the original question image.")
+                ?: throw java.io.IOException("Could not read the saved diagram.")
             if (imageBytes.size > 14 * 1024 * 1024) {
-                throw IllegalStateException("The question image is too large to send. Please crop or resize it and try again.")
+                throw IllegalStateException("The diagram is too large to send. Please crop or resize it and try again.")
             }
             val mimeType = resolver.getType(sourceImageUri)
                 ?.takeIf { it.startsWith("image/") } ?: "image/jpeg"
@@ -588,7 +638,7 @@ class AddQuestionViewModel(
                 options = _options.value.filter { it.isNotBlank() },
                 correctOptionIndex = _selectedOption.value,
                 explanation = _explanation.value,
-                imageUri = _imageUri.value?.toString(),
+                imageUri = null,
                 diagramUri = _diagramUri.value?.toString(),
                 isFavorite = currentQuestion?.isFavorite ?: false,
                 difficulty = currentQuestion?.difficulty ?: Difficulty.MEDIUM,
@@ -602,6 +652,8 @@ class AddQuestionViewModel(
             } else {
                 questionDao.update(question)
             }
+            deleteTemporaryImage(_imageUri.value)
+            _imageUri.value = null
         } catch (e: Exception) {
             Log.e("AddQuestionViewModel", "Failed to save question", e)
             throw e

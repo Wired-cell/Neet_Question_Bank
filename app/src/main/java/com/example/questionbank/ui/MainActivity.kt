@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation(vaultDao, questionDao) { enabled ->
+                    AppNavigation(vaultDao, questionDao, darkTheme) { enabled ->
                         darkTheme = enabled
                         preferences.edit().putBoolean("dark_theme", enabled).apply()
                     }

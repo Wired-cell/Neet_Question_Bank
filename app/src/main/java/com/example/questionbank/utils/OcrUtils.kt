@@ -103,7 +103,7 @@ object OcrUtils {
         return Regex("""(?i)\b(m|cm|km)\s*/\s*s\s*([23])\b""")
             .replace(text) { match ->
                 val power = if (match.groupValues[2] == "2") "²" else "³"
-                "\${match.groupValues[1]}/s$power"
+                "${match.groupValues[1]}/s$power"
             }
     }
 

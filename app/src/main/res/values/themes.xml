@@ -8,4 +8,10 @@
         <item name="colorSecondaryContainer">@color/teal_700</item>
         <item name="colorOnSecondary">@color/black</item>
     </style>
+    <style name="Theme.QuestionBank.Cropper" parent="Theme.AppCompat.DayNight.DarkActionBar">
+        <item name="colorPrimary">#202124</item>
+        <item name="colorPrimaryDark">#151515</item>
+        <item name="colorAccent">#BB86FC</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
 </resources>

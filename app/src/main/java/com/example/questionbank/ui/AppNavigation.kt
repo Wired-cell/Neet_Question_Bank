@@ -14,7 +14,7 @@ import com.example.questionbank.ui.screens.TestScreen
 import com.example.questionbank.ui.screens.VaultListScreen
 
 @Composable
-fun AppNavigation(vaultDao: VaultDao, questionDao: QuestionDao) {
+fun AppNavigation(vaultDao: VaultDao, questionDao: QuestionDao, onDarkThemeChange: (Boolean) -> Unit) {
     val navController = rememberNavController()
     
     NavHost(
@@ -25,6 +25,7 @@ fun AppNavigation(vaultDao: VaultDao, questionDao: QuestionDao) {
             VaultListScreen(
                 vaultDao = vaultDao,
                 questionDao = questionDao,
+                onDarkThemeChange = onDarkThemeChange,
                 onNavigateToAddQuestion = { vaultId ->
                     navController.navigate("addQuestion/$vaultId")
                 },

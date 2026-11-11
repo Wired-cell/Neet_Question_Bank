@@ -60,14 +60,14 @@ fun AppNavigation(vaultDao: VaultDao, questionDao: QuestionDao) {
             route = "addQuestion/{vaultId}?questionId={questionId}",
             arguments = listOf(
                 navArgument("vaultId") { type = androidx.navigation.NavType.LongType },
-                navArgument("questionId") { 
+                navArgument("questionId") {
                     type = androidx.navigation.NavType.LongType
-                    nullable = true
+                    defaultValue = -1L
                 }
             )
         ) { backStackEntry ->
             val vaultId = backStackEntry.arguments?.getLong("vaultId") ?: 0L
-            val questionId = backStackEntry.arguments?.getLong("questionId")
+            val questionId = backStackEntry.arguments?.getLong("questionId")?.takeIf { it != -1L }
             
             AddQuestionScreen(
                 vaultId = vaultId,

@@ -148,7 +148,7 @@ fun AddQuestionScreen(
     ) { success ->
         if (success) {
             imageUri?.let { uri ->
-                viewModel.processImage(context, uri)
+                viewModel.importQuestionImage(context, uri)
             }
         }
     }
@@ -163,8 +163,7 @@ fun AddQuestionScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         uri?.let { 
-            viewModel.setImageUri(it)
-            viewModel.processImage(context, it)
+            viewModel.importQuestionImage(context, it)
         }
     }
     
@@ -174,7 +173,7 @@ fun AddQuestionScreen(
     ) { result ->
         if (result.isSuccessful) {
             result.uriContent?.let { uri ->
-                viewModel.onCropResult(uri)
+                viewModel.onCropResult(context, uri)
             }
         } else {
             viewModel.cancelCropping()
@@ -185,11 +184,8 @@ fun AddQuestionScreen(
     val cropperImageUri by viewModel.cropperImageUri.collectAsState()
     val ocrResult by viewModel.ocrResult.collectAsState()
     
-    // Handle image processing
-    LaunchedEffect(imageUri) {
-        imageUri?.let { uri ->
-            viewModel.processImage(context, uri)
-        }
+    LaunchedEffect(questionId) {
+        viewModel.migrateExistingImagesToPrivateStorage(context)
     }
     
     Scaffold(

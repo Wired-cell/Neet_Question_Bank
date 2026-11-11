@@ -276,7 +276,16 @@ fun AddQuestionScreen(
                                 outputCompressFormat = Bitmap.CompressFormat.JPEG,
                                 outputCompressQuality = 90,
                                 fixAspectRatio = false,
-                                cropShape = CropImageView.CropShape.RECTANGLE
+                                cropShape = CropImageView.CropShape.RECTANGLE,
+                                activityTitle = "Crop Diagram",
+                                cropMenuCropButtonTitle = "Done",
+                                cropMenuCropButtonIcon = com.example.questionbank.R.drawable.ic_crop_done,
+                                activityMenuIconColor = android.graphics.Color.WHITE,
+                                activityMenuTextColor = android.graphics.Color.WHITE,
+                                toolbarColor = android.graphics.Color.rgb(32, 33, 36),
+                                toolbarTitleColor = android.graphics.Color.WHITE,
+                                toolbarBackButtonColor = android.graphics.Color.WHITE,
+                                toolbarTintColor = android.graphics.Color.WHITE
                             )
                         )
                         cropperLauncher.launch(cropOptions)
@@ -346,7 +355,15 @@ fun AddQuestionScreen(
                                 outputCompressQuality = 90,
                                 fixAspectRatio = false,
                                 cropShape = CropImageView.CropShape.RECTANGLE,
-                                activityTitle = "Crop Diagram"
+                                activityTitle = "Crop Diagram",
+                                cropMenuCropButtonTitle = "Done",
+                                cropMenuCropButtonIcon = com.example.questionbank.R.drawable.ic_crop_done,
+                                activityMenuIconColor = android.graphics.Color.WHITE,
+                                activityMenuTextColor = android.graphics.Color.WHITE,
+                                toolbarColor = android.graphics.Color.rgb(32, 33, 36),
+                                toolbarTitleColor = android.graphics.Color.WHITE,
+                                toolbarBackButtonColor = android.graphics.Color.WHITE,
+                                toolbarTintColor = android.graphics.Color.WHITE
                             )
                         )
                         cropperLauncher.launch(cropOptions)

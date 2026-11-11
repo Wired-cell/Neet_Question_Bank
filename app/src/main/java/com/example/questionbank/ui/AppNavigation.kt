@@ -14,7 +14,7 @@ import com.example.questionbank.ui.screens.TestScreen
 import com.example.questionbank.ui.screens.VaultListScreen
 
 @Composable
-fun AppNavigation(vaultDao: VaultDao, questionDao: QuestionDao, darkTheme: Boolean, onDarkThemeChange: (Boolean) -> Unit) {
+fun AppNavigation(vaultDao: VaultDao, questionDao: QuestionDao, darkTheme: Boolean, darcula: Boolean, onDarkThemeChange: (Boolean) -> Unit, onDarculaChange: (Boolean) -> Unit) {
     val navController = rememberNavController()
     
     NavHost(
@@ -82,6 +82,8 @@ fun AppNavigation(vaultDao: VaultDao, questionDao: QuestionDao, darkTheme: Boole
         
         composable("settings") {
             SettingsScreen(
+                darcula = darcula,
+                onDarculaChange = onDarculaChange,
                 onBack = { navController.popBackStack() }
             )
         }

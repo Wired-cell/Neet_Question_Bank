@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -162,9 +163,85 @@ class AddQuestionViewModel(
     fun setImageUri(uri: Uri?) {
         _imageUri.value = uri
     }
-    
+
+    fun importQuestionImage(context: Context, sourceUri: Uri) {
+        viewModelScope.launch {
+            try {
+                val savedUri = withContext(Dispatchers.IO) {
+                    persistImageInAppStorage(context, sourceUri)
+                }
+                _imageUri.value = savedUri
+                processImage(context, savedUri)
+            } catch (e: Exception) {
+                Log.e("AddQuestionViewModel", "Could not import question image", e)
+                _imageUri.value = sourceUri
+            }
+        }
+    }
+
     fun setDiagramUri(uri: Uri?) {
         _diagramUri.value = uri
+    }
+
+    fun importDiagramImage(context: Context, sourceUri: Uri?) {
+        viewModelScope.launch {
+            _isCropping.value = false
+            _cropperImageUri.value = null
+            if (sourceUri == null) return@launch
+            try {
+                _diagramUri.value = withContext(Dispatchers.IO) {
+                    persistImageInAppStorage(context, sourceUri)
+                }
+            } catch (e: Exception) {
+                Log.e("AddQuestionViewModel", "Could not import diagram image", e)
+                _diagramUri.value = sourceUri
+            }
+        }
+    }
+
+    fun migrateExistingImagesToPrivateStorage(context: Context) {
+        if (questionId == null) return
+        viewModelScope.launch {
+            try {
+                val question = questionDao.getQuestionById(questionId).first() ?: return@launch
+                val image = question.imageUri?.let(Uri::parse)
+                val diagram = question.diagramUri?.let(Uri::parse)
+                if (image != null) {
+                    _imageUri.value = withContext(Dispatchers.IO) {
+                        persistImageInAppStorage(context, image)
+                    }
+                }
+                if (diagram != null) {
+                    _diagramUri.value = withContext(Dispatchers.IO) {
+                        persistImageInAppStorage(context, diagram)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("AddQuestionViewModel", "Could not migrate existing question images", e)
+            }
+        }
+    }
+
+    private fun persistImageInAppStorage(context: Context, sourceUri: Uri): Uri {
+        val sourcePath = sourceUri.path.orEmpty()
+        val privatePath = File(context.filesDir, "question_images").absolutePath
+        if (sourceUri.scheme == "file" && sourcePath.startsWith(privatePath)) return sourceUri
+
+        val extension = when (context.contentResolver.getType(sourceUri)) {
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            "image/gif" -> "gif"
+            else -> "jpg"
+        }
+        val directory = File(context.filesDir, "question_images")
+        if (!directory.exists() && !directory.mkdirs()) {
+            throw java.io.IOException("Could not create private image storage.")
+        }
+        val destination = File(directory, "image_${java.util.UUID.randomUUID()}.$extension")
+        context.contentResolver.openInputStream(sourceUri)?.use { input ->
+            destination.outputStream().use { output -> input.copyTo(output) }
+        } ?: throw java.io.IOException("Could not read the selected image.")
+        return Uri.fromFile(destination)
     }
     
     fun clearOcrText() {
@@ -227,15 +304,8 @@ class AddQuestionViewModel(
     /**
      * Handle cropper result
      */
-    fun onCropResult(uri: Uri?) {
-        viewModelScope.launch {
-            _isCropping.value = false
-            _cropperImageUri.value = null
-            
-            uri?.let { croppedUri ->
-                _diagramUri.value = croppedUri
-            }
-        }
+    fun onCropResult(context: Context, uri: Uri?) {
+        importDiagramImage(context, uri)
     }
     
     /**
@@ -280,18 +350,9 @@ class AddQuestionViewModel(
                 try {
                     // For now, just copy the image as diagram
                     // In a real implementation, this would open a cropper
-                    val file = File.createTempFile(
-                        "diagram_${System.currentTimeMillis()}",
-                        ".jpg",
-                        context.cacheDir
-                    )
-                    val inputStream = context.contentResolver.openInputStream(uri)
-                    val outputStream = FileOutputStream(file)
-                    inputStream?.copyTo(outputStream)
-                    inputStream?.close()
-                    outputStream.close()
-                    
-                    _diagramUri.value = Uri.fromFile(file)
+                    _diagramUri.value = withContext(Dispatchers.IO) {
+                        persistImageInAppStorage(context, uri)
+                    }
                 } catch (e: Exception) {
                     Log.e("AddQuestionViewModel", "Failed to crop diagram", e)
                 }

@@ -726,7 +726,8 @@ fun OcrResultCard(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(12.dp),
-                                style = MaterialTheme.typography.bodyMedium
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }

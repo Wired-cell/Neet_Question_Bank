@@ -77,6 +77,8 @@ class AddQuestionViewModel(
     
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    private val _isFetchingExplanation = MutableStateFlow(false)
+    val isFetchingExplanation: StateFlow<Boolean> = _isFetchingExplanation.asStateFlow()
     
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
@@ -299,7 +301,7 @@ class AddQuestionViewModel(
     
     fun fetchExplanation(query: String, context: Context) {
         viewModelScope.launch {
-            _isLoading.value = true
+            _isFetchingExplanation.value = true
             try {
                 val apiKey = context.applicationContext
                     .getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
@@ -321,7 +323,7 @@ class AddQuestionViewModel(
                 Log.e("AddQuestionViewModel", "Failed to fetch explanation", e)
                 _explanation.value = "Could not fetch an explanation: ${e.message ?: "Unknown error"}. Check your API key and internet connection."
             } finally {
-                _isLoading.value = false
+                _isFetchingExplanation.value = false
             }
         }
     }

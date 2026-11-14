@@ -107,6 +107,7 @@ import com.example.questionbank.ui.viewmodel.AddQuestionViewModel
 import com.example.questionbank.utils.ImageUtils
 import com.example.questionbank.utils.OcrUtils
 import com.example.questionbank.utils.PermissionUtils
+import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
@@ -1125,8 +1126,12 @@ fun DiagramSection(
 @Composable
 fun ExplanationSection(
     explanation: String,
+    solutionImageUri: Uri?,
     isFetching: Boolean,
     onExplanationChange: (String) -> Unit,
+    onCameraClick: () -> Unit,
+    onGalleryClick: () -> Unit,
+    onRemoveSolutionImage: () -> Unit,
     onFetchClick: (String) -> Unit
 ) {
     val context = LocalContext.current
@@ -1164,14 +1169,20 @@ fun ExplanationSection(
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.weight(1f))
+            IconButton(onClick = onCameraClick, enabled = !isFetching, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.CameraAlt, contentDescription = "Take solution photo")
+            }
+            IconButton(onClick = onGalleryClick, enabled = !isFetching, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.PhotoLibrary, contentDescription = "Choose solution image")
+            }
             Box {
                 OutlinedButton(
                     onClick = { providerMenuExpanded = true },
                     enabled = availableProviders.isNotEmpty() && !isFetching,
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 3.dp)
                 ) {
-                    Text(selectedProvider.ifBlank { "Provider" }, maxLines = 1, style = MaterialTheme.typography.labelMedium)
-                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Select provider")
+                    Text(selectedProvider.ifBlank { "Provider" }, maxLines = 1, style = MaterialTheme.typography.labelSmall)
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Select provider", modifier = Modifier.size(16.dp))
                 }
                 DropdownMenu(
                     expanded = providerMenuExpanded,
@@ -1191,18 +1202,32 @@ fun ExplanationSection(
             }
             FilledTonalButton(
                 onClick = { if (selectedProvider.isNotBlank()) onFetchClick(selectedProvider) },
-                enabled = !isFetching && selectedProvider.isNotBlank()
+                enabled = !isFetching && selectedProvider.isNotBlank(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 5.dp)
             ) {
                 if (isFetching) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp
-                    )
+                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
                 } else {
-                    Icon(Icons.Default.Info, contentDescription = "Fetch solution")
+                    Icon(Icons.Default.Info, contentDescription = "Fetch solution", modifier = Modifier.size(15.dp))
                 }
-                Spacer(modifier = Modifier.size(4.dp))
-                Text(if (isFetching) "Generating..." else "Fetch solution")
+                Spacer(modifier = Modifier.size(3.dp))
+                Text(if (isFetching) "Wait" else "Fetch", style = MaterialTheme.typography.labelSmall)
+            }
+        }
+        if (solutionImageUri != null) {
+            Box(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                AsyncImage(
+                    model = solutionImageUri,
+                    contentDescription = "Saved solution image",
+                    modifier = Modifier.fillMaxWidth().height(190.dp),
+                    contentScale = ContentScale.Fit
+                )
+                IconButton(
+                    onClick = onRemoveSolutionImage,
+                    modifier = Modifier.align(Alignment.TopEnd).background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f), RoundedCornerShape(20.dp))
+                ) {
+                    Icon(Icons.Default.Clear, contentDescription = "Remove solution image")
+                }
             }
         }
         if (selectedProvider.isNotBlank()) {

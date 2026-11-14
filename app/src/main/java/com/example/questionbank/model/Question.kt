@@ -28,6 +28,7 @@ data class Question(
     val explanation: String = "",
     val imageUri: String? = null,
     val diagramUri: String? = null,
+    val solutionImageUri: String? = null,
     val isFavorite: Boolean = false,
     val difficulty: Difficulty = Difficulty.MEDIUM,
     val tags: List<String> = emptyList(),

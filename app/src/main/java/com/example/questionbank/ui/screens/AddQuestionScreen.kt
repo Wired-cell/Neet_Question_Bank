@@ -495,7 +495,7 @@ fun VaultSelector(
                         colors = CardDefaults.cardColors(containerColor = Color(selectedVault.color))
                     ) {
                         Text(
-                            text = selectedVault.icon.ifEmpty { selectedVault.name.take(1) },
+                            text = selectedVault.icon.ifEmpty { vaultIconForAdd(selectedVault.name) },
                             modifier = Modifier.fillMaxSize().padding(4.dp),
                             textAlign = TextAlign.Center,
                             color = Color.White
@@ -1315,7 +1315,7 @@ fun VaultDialogItem(
             colors = CardDefaults.cardColors(containerColor = Color(vault.color))
         ) {
             Text(
-                text = vault.icon.ifEmpty { vault.name.take(1) },
+                text = vault.icon.ifEmpty { vaultIconForAdd(vault.name) },
                 modifier = Modifier.fillMaxSize().padding(4.dp),
                 textAlign = TextAlign.Center,
                 color = Color.White,
@@ -1456,4 +1456,17 @@ fun createImageUri(context: Context): Uri {
         "${context.packageName}.fileprovider",
         file
     )
+}
+
+
+private fun vaultIconForAdd(name: String): String = when (name.lowercase()) {
+    "physics" -> "⚛️"
+    "chemistry" -> "🧪"
+    "physical chemistry" -> "⚗️"
+    "inorganic chemistry" -> "🧬"
+    "organic chemistry" -> "🧫"
+    "biology" -> "🌿"
+    "zoology" -> "🐾"
+    "botany" -> "🌱"
+    else -> "📚"
 }

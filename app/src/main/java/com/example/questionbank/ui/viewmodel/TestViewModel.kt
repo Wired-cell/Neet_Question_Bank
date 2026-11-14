@@ -128,10 +128,12 @@ class TestViewModel(
                 picked += allByVault[vault].orEmpty().shuffled().take(45)
             }
             if (chemistrySelected.isNotEmpty()) {
-                val weights = chemistrySelected.associate { it.id to (_chemistryWeights.value[it.id] ?: 33).coerceAtLeast(0) }
-                val totalWeight = weights.values.sum().takeIf { it > 0 } ?: chemistrySelected.size
+                val rawWeights = chemistrySelected.associate { it.id to (_chemistryWeights.value[it.id] ?: 33).coerceAtLeast(0) }
+                val allZero = rawWeights.values.sum() == 0
+                val totalWeight = if (allZero) chemistrySelected.size else rawWeights.values.sum()
                 val exact = chemistrySelected.associate { v ->
-                    v.id to 45.0 * ((weights[v.id] ?: 1).takeIf { totalWeight > 0 } ?: 1) / totalWeight
+                    val weight = if (allZero) 1 else (rawWeights[v.id] ?: 0)
+                    v.id to 45.0 * weight / totalWeight
                 }
                 val counts = exact.mapValues { it.value.toInt() }.toMutableMap()
                 var remaining = 45 - counts.values.sum()

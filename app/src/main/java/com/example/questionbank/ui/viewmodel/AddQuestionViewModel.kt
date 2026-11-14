@@ -57,6 +57,9 @@ class AddQuestionViewModel(
     
     private val _diagramUri = MutableStateFlow<Uri?>(null)
     val diagramUri: StateFlow<Uri?> = _diagramUri.asStateFlow()
+
+    private val _solutionImageUri = MutableStateFlow<Uri?>(null)
+    val solutionImageUri: StateFlow<Uri?> = _solutionImageUri.asStateFlow()
     
     private val _ocrText = MutableStateFlow("")
     val ocrText: StateFlow<String> = _ocrText.asStateFlow()
@@ -116,6 +119,7 @@ class AddQuestionViewModel(
                         _explanation.value = q.explanation
                         _imageUri.value = q.imageUri?.let { Uri.parse(it) }
                         _diagramUri.value = q.diagramUri?.let { Uri.parse(it) }
+                        _solutionImageUri.value = q.solutionImageUri?.let { Uri.parse(it) }
                     }
                 }
             }
@@ -188,6 +192,54 @@ class AddQuestionViewModel(
         val previous = _diagramUri.value
         _diagramUri.value = uri
         if (previous != uri) deleteManagedImage(context, previous)
+    }
+
+    fun importSolutionImage(context: Context, sourceUri: Uri) {
+        viewModelScope.launch {
+            try {
+                val saved = withContext(Dispatchers.IO) {
+                    persistImageInDirectory(context, sourceUri, "solution_images")
+                }
+                val previous = _solutionImageUri.value
+                _solutionImageUri.value = saved
+                if (previous != saved) withContext(Dispatchers.IO) { deleteImageInDirectory(context, previous, "solution_images") }
+                withContext(Dispatchers.IO) { deleteCameraCapture(context, sourceUri) }
+            } catch (e: Exception) {
+                Log.e("AddQuestionViewModel", "Could not import solution image", e)
+                _solutionImageUri.value = sourceUri
+            }
+        }
+    }
+
+    fun removeSolutionImage(context: Context) {
+        val previous = _solutionImageUri.value
+        _solutionImageUri.value = null
+        viewModelScope.launch(Dispatchers.IO) { deleteImageInDirectory(context, previous, "solution_images") }
+    }
+
+    private fun persistImageInDirectory(context: Context, sourceUri: Uri, directoryName: String): Uri {
+        val directory = File(context.filesDir, directoryName)
+        val privatePath = directory.absolutePath
+        if (sourceUri.scheme == "file" && sourceUri.path.orEmpty().startsWith("$privatePath/")) return sourceUri
+        if (!directory.exists() && !directory.mkdirs()) throw java.io.IOException("Could not create private image storage.")
+        val extension = when (context.contentResolver.getType(sourceUri)) {
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            "image/gif" -> "gif"
+            else -> "jpg"
+        }
+        val destination = File(directory, "image_${java.util.UUID.randomUUID()}.$extension")
+        context.contentResolver.openInputStream(sourceUri)?.use { input ->
+            destination.outputStream().use { output -> input.copyTo(output) }
+        } ?: throw java.io.IOException("Could not read the selected image.")
+        return Uri.fromFile(destination)
+    }
+
+    private fun deleteImageInDirectory(context: Context, uri: Uri?, directoryName: String) {
+        if (uri?.scheme != "file") return
+        val file = uri.path?.let(::File) ?: return
+        val managed = File(context.filesDir, directoryName).absolutePath
+        if (file.absolutePath.startsWith("$managed/")) file.delete()
     }
 
     fun importDiagramImage(context: Context, sourceUri: Uri?) {
@@ -834,6 +886,7 @@ class AddQuestionViewModel(
                 explanation = _explanation.value,
                 imageUri = null,
                 diagramUri = _diagramUri.value?.toString(),
+                solutionImageUri = _solutionImageUri.value?.toString(),
                 isFavorite = currentQuestion?.isFavorite ?: false,
                 difficulty = currentQuestion?.difficulty ?: Difficulty.MEDIUM,
                 tags = currentQuestion?.tags ?: emptyList(),

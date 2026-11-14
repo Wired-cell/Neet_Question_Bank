@@ -21,12 +21,12 @@ data class Vault(
 
 // Default vault structure
 val defaultVaults = listOf(
-    Vault(name = "Physics", parentId = null, color = 0xFF2196F3.toInt(), icon = "📚"),
+    Vault(name = "Physics", parentId = null, color = 0xFF2196F3.toInt(), icon = "⚛️"),
     Vault(name = "Chemistry", parentId = null, color = 0xFF4CAF50.toInt(), icon = "🧪"),
-    Vault(name = "Physical Chemistry", parentId = 2, color = 0xFF9C27B0.toInt()),
-    Vault(name = "Inorganic Chemistry", parentId = 2, color = 0xFFFF9800.toInt()),
-    Vault(name = "Organic Chemistry", parentId = 2, color = 0xFFF44336.toInt()),
-    Vault(name = "Biology", parentId = null, color = 0xFF8BC34A.toInt(), icon = "🌱"),
-    Vault(name = "Botany", parentId = 6, color = 0xFF4CAF50.toInt()),
-    Vault(name = "Zoology", parentId = 6, color = 0xFFCDDC39.toInt())
+    Vault(name = "Physical Chemistry", parentId = 2, color = 0xFF9C27B0.toInt(), icon = "⚗️"),
+    Vault(name = "Inorganic Chemistry", parentId = 2, color = 0xFFFF9800.toInt(), icon = "🧬"),
+    Vault(name = "Organic Chemistry", parentId = 2, color = 0xFFF44336.toInt(), icon = "🧫"),
+    Vault(name = "Biology", parentId = null, color = 0xFF8BC34A.toInt(), icon = "🌿"),
+    Vault(name = "Zoology", parentId = 6, color = 0xFFCDDC39.toInt(), icon = "🐾"),
+    Vault(name = "Botany", parentId = 6, color = 0xFF4CAF50.toInt(), icon = "🌱")
 )

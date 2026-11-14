@@ -509,24 +509,40 @@ class AddQuestionViewModel(
             "Use the attached cropped diagram together with the saved and edited question text and answer choices below. The diagram is the only image source."
         }
         val prompt = """
-            You are a careful physics and science tutor. Solve the user's saved and edited question text
-            and answer choices below, using the attached cropped diagram only as visual reference.
-            Read every visible label, arrow, unit, symbol, and geometric relationship in that diagram.
-            Do not infer missing values from a textbook or familiar question. If a diagram detail is
-            genuinely unreadable, say exactly what is unclear rather than guessing.
-            Solve step by step, define variables, show substitutions and calculations, and identify
-            the correct option when possible.
+            Act as a friendly, patient science tutor explaining this to a student. Be natural,
+            clear, and encouraging without sounding robotic or overly formal.
+
+            First, understand the exact question and answer choices. Use the attached cropped
+            diagram only as a visual reference. Read its visible labels, arrows, units, symbols,
+            and relationships carefully. Never invent missing information or assume this is a
+            familiar textbook problem. If an important detail is unreadable, briefly say what
+            cannot be determined and explain what can still be solved.
+
+            Write the explanation like a helpful teacher:
+            1. Start with the key idea or principle in one short sentence. Skip generic introductions.
+            2. Explain the solution in a few logical, numbered steps. Keep each step concise and
+               use everyday language. Define a variable only when it is needed.
+            3. Show the important equation, substitution, and calculation, but do not repeat
+               the same information in words and equations.
+            4. Briefly explain why the result makes sense when useful.
+            5. End with a clear final answer and the correct option letter, if the choices allow it.
+
+            Keep the response focused on what helps the student understand. Avoid long
+            introductions, repetitive conclusions, excessive headings, unnecessary bullet lists,
+            and phrases such as "Let's dive in". Do not add facts that are not needed to solve
+            the question. If the problem is simple, keep the explanation short; use more detail
+            only when the reasoning genuinely requires it.
+
+            OUTPUT STYLE:
+            The answer appears in a plain text field, not a LaTeX renderer. Do not use LaTeX,
+            dollar signs for math, or Markdown decoration. Write equations as readable plain text
+            with Unicode symbols such as ×, ÷, √, =, ≈, ≤, ≥, Δ, θ, π, and →, and use
+            superscripts/subscripts where available, such as m², x₁, v₀, and 10⁻³.
+            Put equations on separate lines when that improves readability. Use simple labels
+            such as "Step 1" and "Final answer", without asterisks or hash headings.
 
             Saved and edited question text and answer choices:
             $question
-
-            IMPORTANT OUTPUT FORMATTING:
-            The answer is displayed in a plain text field, not a LaTeX renderer. Do NOT use LaTeX,
-            dollar signs for math, Markdown, or commands such as \\( \\), \\[ \\], \\frac,
-            \\sqrt, \\times, or \\text. Write equations as readable plain text using Unicode
-            symbols: ×, ÷, √, =, ≈, ≤, ≥, Δ, θ, π, →, and superscripts/subscripts such as m²,
-            x₁, v₀, and 10⁻³. Put each equation on its own line. Use clear headings and numbered
-            steps without Markdown decoration.
 
             $imageInstruction
         """.trimIndent()
@@ -608,24 +624,40 @@ class AddQuestionViewModel(
             "Use the attached cropped diagram together with the saved and edited question text and answer choices below. The diagram is the only image source."
         }
         val prompt = """
-            You are a careful physics and science tutor. Solve the user's saved and edited question text
-            and answer choices below, using the attached cropped diagram only as visual reference.
-            Read every visible label, arrow, unit, symbol, and geometric relationship in that diagram.
-            Do not infer missing values from a textbook or familiar question. If a diagram detail is
-            genuinely unreadable, say exactly what is unclear rather than guessing.
-            Solve step by step, define variables, show substitutions and calculations, and identify
-            the correct option when possible.
+            Act as a friendly, patient science tutor explaining this to a student. Be natural,
+            clear, and encouraging without sounding robotic or overly formal.
+
+            First, understand the exact question and answer choices. Use the attached cropped
+            diagram only as a visual reference. Read its visible labels, arrows, units, symbols,
+            and relationships carefully. Never invent missing information or assume this is a
+            familiar textbook problem. If an important detail is unreadable, briefly say what
+            cannot be determined and explain what can still be solved.
+
+            Write the explanation like a helpful teacher:
+            1. Start with the key idea or principle in one short sentence. Skip generic introductions.
+            2. Explain the solution in a few logical, numbered steps. Keep each step concise and
+               use everyday language. Define a variable only when it is needed.
+            3. Show the important equation, substitution, and calculation, but do not repeat
+               the same information in words and equations.
+            4. Briefly explain why the result makes sense when useful.
+            5. End with a clear final answer and the correct option letter, if the choices allow it.
+
+            Keep the response focused on what helps the student understand. Avoid long
+            introductions, repetitive conclusions, excessive headings, unnecessary bullet lists,
+            and phrases such as "Let's dive in". Do not add facts that are not needed to solve
+            the question. If the problem is simple, keep the explanation short; use more detail
+            only when the reasoning genuinely requires it.
+
+            OUTPUT STYLE:
+            The answer appears in a plain text field, not a LaTeX renderer. Do not use LaTeX,
+            dollar signs for math, or Markdown decoration. Write equations as readable plain text
+            with Unicode symbols such as ×, ÷, √, =, ≈, ≤, ≥, Δ, θ, π, and →, and use
+            superscripts/subscripts where available, such as m², x₁, v₀, and 10⁻³.
+            Put equations on separate lines when that improves readability. Use simple labels
+            such as "Step 1" and "Final answer", without asterisks or hash headings.
 
             Saved and edited question text and answer choices:
             $question
-
-            IMPORTANT OUTPUT FORMATTING:
-            The answer is displayed in a plain text field, not a LaTeX renderer. Do NOT use LaTeX,
-            dollar signs for math, Markdown, or commands such as \\( \\), \\[ \\], \\frac,
-            \\sqrt, \\times, or \\text. Write equations as readable plain text using Unicode
-            symbols: ×, ÷, √, =, ≈, ≤, ≥, Δ, θ, π, →, and superscripts/subscripts such as m²,
-            x₁, v₀, and 10⁻³. Put each equation on its own line. Use clear headings and numbered
-            steps without Markdown decoration.
 
             $imageInstruction
         """.trimIndent()

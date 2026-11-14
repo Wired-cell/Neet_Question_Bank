@@ -88,10 +88,18 @@ class TestViewModel(
     fun getChemistryVaults(): List<Vault> = _vaults.value.filter { v ->
         _vaults.value.firstOrNull { it.id == v.parentId }?.name.equals("Chemistry", true)
     }
-    fun getSelectableVaults(): List<Vault> = (_vaults.value.filter { vault ->
+    fun getSelectableVaults(): List<Vault> = _vaults.value.filter { vault ->
         vault.name.equals("Physics", true) ||
+            vault.name.equals("Biology", true) ||
             _vaults.value.firstOrNull { it.id == vault.parentId }?.name.equals("Chemistry", true)
-    }).sortedWith(compareBy<Vault> { if (it.name.equals("Physics", true)) 0 else 1 }.thenBy { it.name })
+    }.sortedWith(compareBy<Vault> {
+        when {
+            it.name.equals("Physics", true) -> 0
+            _vaults.value.firstOrNull { parent -> parent.id == it.parentId }?.name.equals("Chemistry", true) -> 1
+            it.name.equals("Biology", true) -> 2
+            else -> 3
+        }
+    }.thenBy { it.name })
 
     fun toggleVault(vaultId: Long) {
         _selectedVaults.value = if (vaultId in _selectedVaults.value) _selectedVaults.value - vaultId
@@ -122,11 +130,18 @@ class TestViewModel(
             val selected = getSelectableVaults().filter { it.id in _selectedVaults.value }
             val allByVault = selected.associateWith { questionDao.getQuestionsByVault(it.id).first() }
             val chemistrySelected = selected.filter { it in getChemistryVaults() }
-            val otherSelected = selected.filterNot { it in chemistrySelected }
+            val biologyVault = selected.firstOrNull { it.name.equals("Biology", true) }
+            val otherSelected = selected.filterNot { it in chemistrySelected || it == biologyVault }
             val picked = mutableListOf<Question>()
 
             otherSelected.forEach { vault ->
                 picked += allByVault[vault].orEmpty().shuffled().take(45)
+            }
+            if (biologyVault != null) {
+                val biologyChildren = _vaults.value.filter { it.parentId == biologyVault.id }
+                biologyChildren.forEach { child ->
+                    picked += questionDao.getQuestionsByVault(child.id).first().shuffled().take(45)
+                }
             }
             if (chemistrySelected.isNotEmpty()) {
                 val rawWeights = chemistrySelected.associate { it.id to (_chemistryWeights.value[it.id] ?: 33).coerceAtLeast(0) }

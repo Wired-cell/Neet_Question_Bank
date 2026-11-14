@@ -433,41 +433,166 @@ class AddQuestionViewModel(
         }
     }
     
-    fun fetchExplanation(query: String, context: Context, sourceImageUri: Uri? = null) {
+    fun fetchExplanation(
+        query: String,
+        context: Context,
+        sourceImageUri: Uri? = null,
+        provider: String = "Gemini"
+    ) {
         viewModelScope.launch {
             _isFetchingExplanation.value = true
             try {
-                val apiKey = context.applicationContext
-                    .getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-                    .getString("google_ai_key", "")
-                    ?.trim()
-                    .orEmpty()
-                if (apiKey.isBlank()) {
-                    _explanation.value = "Please add your Google AI Studio API key in Settings, then try again."
-                    return@launch
-                }
+                val prefs = context.applicationContext.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
                 if (query.isBlank()) {
                     _explanation.value = "Please enter a question before requesting an explanation."
                     return@launch
                 }
                 _explanation.value = withContext(Dispatchers.IO) {
-                    requestGeminiExplanation(apiKey, query, context, sourceImageUri)
+                    when (provider) {
+                        "Groq" -> {
+                            val key = prefs.getString("groq_api_key", "")?.trim().orEmpty()
+                            if (key.isBlank()) throw IllegalStateException("Add your Groq API key in Settings first.")
+                            val model = prefs.getString("groq_model", "qwen/qwen3.8-27b") ?: "qwen/qwen3.8-27b"
+                            requestOpenAiCompatibleExplanation(
+                                key, model, "https://api.groq.com/openai/v1/chat/completions",
+                                query, context, sourceImageUri, "Groq"
+                            )
+                        }
+                        "NVIDIA Build" -> {
+                            val key = prefs.getString("nvidia_api_key", "")?.trim().orEmpty()
+                            if (key.isBlank()) throw IllegalStateException("Add your NVIDIA Build API key in Settings first.")
+                            val model = prefs.getString("nvidia_model", "nvidia/nemotron-3.5-super-vl-120b-a12b")
+                                ?: "nvidia/nemotron-3.5-super-vl-120b-a12b"
+                            requestOpenAiCompatibleExplanation(
+                                key, model, "https://integrate.api.nvidia.com/v1/chat/completions",
+                                query, context, sourceImageUri, "NVIDIA Build"
+                            )
+                        }
+                        else -> {
+                            val key = prefs.getString("google_ai_key", "")?.trim().orEmpty()
+                            if (key.isBlank()) throw IllegalStateException("Add your Google AI Studio API key in Settings first.")
+                            requestGeminiExplanation(key, query, context, sourceImageUri)
+                        }
+                    }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
-                Log.e("AddQuestionViewModel", "Failed to fetch explanation", e)
+                Log.e("AddQuestionViewModel", "Failed to fetch explanation from $provider", e)
+                val providerName = if (provider == "Gemini") "Gemini" else provider
                 _explanation.value = when (e) {
                     is java.net.SocketTimeoutException ->
-                        "Gemini took too long to respond. Your question may still be processing; please try Fetch Solution again."
+                        "$providerName took too long to respond. Please try again later."
                     is java.net.SocketException, is java.io.IOException ->
-                        "The connection to Google's AI service was interrupted. This is not necessarily a Wi-Fi or API-key problem. Please try again."
+                        "The connection to $providerName was interrupted. Please check your connection and try again."
                     else ->
-                        "Could not fetch an explanation: ${e.message ?: "Unknown error"}"
+                        "Could not fetch an explanation from $providerName: ${e.message ?: "Unknown error"}"
                 }
             } finally {
                 _isFetchingExplanation.value = false
             }
+        }
+    }
+
+    private fun requestOpenAiCompatibleExplanation(
+        apiKey: String,
+        model: String,
+        endpoint: String,
+        question: String,
+        context: Context,
+        sourceImageUri: Uri?,
+        providerName: String
+    ): String {
+        val imageInstruction = if (sourceImageUri == null) {
+            "No diagram image is attached. Solve using the saved question text and answer choices below."
+        } else {
+            "Use the attached cropped diagram together with the saved and edited question text and answer choices below. The diagram is the only image source."
+        }
+        val prompt = """
+            You are a careful physics and science tutor. Solve the user's saved and edited question text
+            and answer choices below, using the attached cropped diagram only as visual reference.
+            Read every visible label, arrow, unit, symbol, and geometric relationship in that diagram.
+            Do not infer missing values from a textbook or familiar question. If a diagram detail is
+            genuinely unreadable, say exactly what is unclear rather than guessing.
+            Solve step by step, define variables, show substitutions and calculations, and identify
+            the correct option when possible.
+
+            Saved and edited question text and answer choices:
+            $question
+
+            IMPORTANT OUTPUT FORMATTING:
+            The answer is displayed in a plain text field, not a LaTeX renderer. Do NOT use LaTeX,
+            dollar signs for math, Markdown, or commands such as \\( \\), \\[ \\], \\frac,
+            \\sqrt, \\times, or \\text. Write equations as readable plain text using Unicode
+            symbols: ×, ÷, √, =, ≈, ≤, ≥, Δ, θ, π, →, and superscripts/subscripts such as m²,
+            x₁, v₀, and 10⁻³. Put each equation on its own line. Use clear headings and numbered
+            steps without Markdown decoration.
+
+            $imageInstruction
+        """.trimIndent()
+
+        val content = org.json.JSONArray().put(JSONObject().put("type", "text").put("text", prompt))
+        if (sourceImageUri != null) {
+            val resolver = context.contentResolver
+            val imageBytes = resolver.openInputStream(sourceImageUri)?.use { it.readBytes() }
+                ?: throw java.io.IOException("Could not read the saved cropped diagram.")
+            if (imageBytes.size > 14 * 1024 * 1024) {
+                throw IllegalStateException("The cropped diagram is too large to send. Please resize it and try again.")
+            }
+            val mimeType = resolver.getType(sourceImageUri)?.takeIf { it.startsWith("image/") } ?: "image/jpeg"
+            val encodedImage = android.util.Base64.encodeToString(imageBytes, android.util.Base64.NO_WRAP)
+            content.put(
+                JSONObject()
+                    .put("type", "image_url")
+                    .put("image_url", JSONObject().put("url", "data:$mimeType;base64,$encodedImage"))
+            )
+        }
+
+        val body = JSONObject()
+            .put("model", model)
+            .put("messages", org.json.JSONArray().put(JSONObject().put("role", "user").put("content", content)))
+            .put("temperature", 0.2)
+            .toString()
+
+        val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            connectTimeout = 20_000
+            readTimeout = 120_000
+            doOutput = true
+            useCaches = false
+            setRequestProperty("Connection", "close")
+            setRequestProperty("Authorization", "Bearer $apiKey")
+            setRequestProperty("Accept", "application/json")
+            setRequestProperty("Content-Type", "application/json; charset=utf-8")
+        }
+        try {
+            val bytes = body.toByteArray(Charsets.UTF_8)
+            connection.setFixedLengthStreamingMode(bytes.size)
+            connection.outputStream.use { it.write(bytes) }
+            val status = connection.responseCode
+            val responseText = (if (status in 200..299) connection.inputStream else connection.errorStream)
+                ?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (status !in 200..299) {
+                val message = runCatching {
+                    val error = JSONObject(responseText).optJSONObject("error")
+                    error?.optString("message")?.takeIf { it.isNotBlank() }
+                }.getOrNull()
+                throw IllegalStateException(message ?: "$providerName returned HTTP $status.")
+            }
+            val response = JSONObject(responseText)
+            val answerValue = response.optJSONArray("choices")
+                ?.optJSONObject(0)?.optJSONObject("message")?.opt("content")
+            val answer = when (answerValue) {
+                is String -> answerValue
+                is org.json.JSONArray -> (0 until answerValue.length())
+                    .mapNotNull { answerValue.optJSONObject(it)?.optString("text") }
+                    .filter { it.isNotBlank() }.joinToString("\\n")
+                else -> ""
+            }.trim()
+            if (answer.isBlank()) throw IllegalStateException("$providerName returned an empty explanation.")
+            return answer
+        } finally {
+            connection.disconnect()
         }
     }
 

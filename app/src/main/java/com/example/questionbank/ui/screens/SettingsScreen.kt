@@ -293,3 +293,107 @@ private fun runGeminiConnectionTest(apiKey: String): String {
         connection.disconnect()
     }
 }
+
+
+@Composable
+private fun ProviderApiCard(
+    title: String,
+    description: String,
+    keyValue: String,
+    keyPlaceholder: String,
+    onKeyChange: (String) -> Unit,
+    model: String,
+    models: List<String>,
+    onModelChange: (String) -> Unit,
+    isTesting: Boolean,
+    result: String?,
+    succeeded: Boolean?,
+    onTest: () -> Unit
+) {
+    var modelMenuExpanded by remember { mutableStateOf(false) }
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
+            Spacer(modifier = Modifier.height(10.dp))
+            OutlinedTextField(
+                value = keyValue,
+                onValueChange = onKeyChange,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text(keyPlaceholder) },
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            Text("Model to use", style = MaterialTheme.typography.labelLarge)
+            androidx.compose.foundation.layout.Box {
+                OutlinedButton(onClick = { modelMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text(model)
+                }
+                DropdownMenu(expanded = modelMenuExpanded, onDismissRequest = { modelMenuExpanded = false }) {
+                    models.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option) },
+                            onClick = { onModelChange(option); modelMenuExpanded = false }
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Button(onClick = onTest, enabled = keyValue.isNotBlank() && !isTesting, modifier = Modifier.fillMaxWidth()) {
+                if (isTesting) {
+                    CircularProgressIndicator(modifier = Modifier.height(18.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                    Text("  Testing…")
+                } else Text("Test $title")
+            }
+            result?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(it, style = MaterialTheme.typography.bodySmall, color = if (succeeded == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+}
+
+private fun runOpenAiCompatibleTest(apiKey: String, model: String, endpoint: String): String {
+    val prompt = "Introduce yourself briefly as the AI assistant in this app. Then answer this exact question: how many letter r's are in the word strawberry? Count the letters carefully."
+    val body = JSONObject()
+        .put("model", model)
+        .put("messages", org.json.JSONArray().put(JSONObject().put("role", "user").put("content", prompt)))
+        .put("temperature", 0.2)
+        .toString()
+    val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
+        requestMethod = "POST"
+        connectTimeout = 15000
+        readTimeout = 90000
+        doOutput = true
+        useCaches = false
+        setRequestProperty("Connection", "close")
+        setRequestProperty("Authorization", "Bearer $apiKey")
+        setRequestProperty("Accept", "application/json")
+        setRequestProperty("Content-Type", "application/json; charset=utf-8")
+    }
+    try {
+        val bytes = body.toByteArray(Charsets.UTF_8)
+        connection.setFixedLengthStreamingMode(bytes.size)
+        connection.outputStream.use { it.write(bytes) }
+        val status = connection.responseCode
+        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+        val responseText = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+        if (status !in 200..299) {
+            val message = runCatching { JSONObject(responseText).optJSONObject("error")?.optString("message") }.getOrNull()
+                ?.takeIf { it.isNotBlank() }
+            throw IllegalStateException(message ?: "Provider returned HTTP $status.")
+        }
+        val response = JSONObject(responseText)
+        val answer = response.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")?.opt("content")
+        val text = when (answer) {
+            is String -> answer
+            is org.json.JSONArray -> (0 until answer.length()).mapNotNull { answer.optJSONObject(it)?.optString("text") }.filter { it.isNotBlank() }.joinToString("\\n")
+            else -> ""
+        }.trim()
+        if (text.isBlank()) throw IllegalStateException("Provider returned an empty answer.")
+        return text
+    } finally {
+        connection.disconnect()
+    }
+}

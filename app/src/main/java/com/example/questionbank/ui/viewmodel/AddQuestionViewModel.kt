@@ -97,7 +97,7 @@ class AddQuestionViewModel(
                 _vaults.value = vaults
                 // Select first vault by default if none selected
                 if (_selectedVault.value == null && vaults.isNotEmpty()) {
-                    _selectedVault.value = vaults.firstOrNull()
+                    _selectedVault.value = vaults.firstOrNull { it.parentId != null || it.name.equals("Physics", true) }
                 }
             }
         }

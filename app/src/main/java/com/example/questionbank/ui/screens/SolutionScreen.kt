@@ -123,6 +123,17 @@ fun SolutionScreen(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+
+                question.solutionImageUri?.takeIf { it.isNotBlank() }?.let { solutionImage ->
+                    AsyncImage(
+                        model = Uri.parse(solutionImage),
+                        contentDescription = "Attached solution image",
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp)
+                            .clip(MaterialTheme.shapes.medium)
+                            .background(MaterialTheme.colorScheme.surface),
+                        contentScale = ContentScale.Fit
+                    )
+                }
             }
         }
     }

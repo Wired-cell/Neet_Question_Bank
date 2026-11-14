@@ -66,7 +66,9 @@ jobs:
         OTHER_ABIS=$(unzip -Z1 "$APK" | awk -F/ '$1 == "lib" {print $2}' | sort -u | grep -v '^arm64-v8a$' || true)
         if [ -n "$OTHER_ABIS" ]; then echo "Unexpected ABIs found: $OTHER_ABIS"; exit 1; fi
 
-        apksigner verify --verbose "$APK"
+        APKSIGNER="$ANDROID_HOME/build-tools/34.0.0/apksigner"
+        test -x "$APKSIGNER" || { echo "Android apksigner not found at $APKSIGNER"; exit 1; }
+        "$APKSIGNER" verify --verbose "$APK"
         mv "$APK" "neet-question-bank-arm64-v${ANDROID_VERSION_CODE}.apk"
     - name: Upload signed ARM64 APK
       uses: actions/upload-artifact@v6

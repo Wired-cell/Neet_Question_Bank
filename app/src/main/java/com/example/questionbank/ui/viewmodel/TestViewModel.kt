@@ -88,8 +88,9 @@ class TestViewModel(
     fun getChemistryVaults(): List<Vault> = _vaults.value.filter { v ->
         _vaults.value.firstOrNull { it.id == v.parentId }?.name.equals("Chemistry", true)
     }
-    fun getSelectableVaults(): List<Vault> = (_vaults.value.filter {
-        it.parentId != null || it.name.equals("Physics", true)
+    fun getSelectableVaults(): List<Vault> = (_vaults.value.filter { vault ->
+        vault.name.equals("Physics", true) ||
+            _vaults.value.firstOrNull { it.id == vault.parentId }?.name.equals("Chemistry", true)
     }).sortedWith(compareBy<Vault> { if (it.name.equals("Physics", true)) 0 else 1 }.thenBy { it.name })
 
     fun toggleVault(vaultId: Long) {

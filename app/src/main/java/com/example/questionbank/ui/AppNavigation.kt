@@ -112,7 +112,8 @@ fun AppNavigation(vaultDao: VaultDao, questionDao: QuestionDao, darkTheme: Boole
             TestScreen(
                 vaultDao = vaultDao,
                 questionDao = questionDao,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onNavigateToSolution = { questionId -> navController.navigate("solution/$questionId") }
             )
         }
     }

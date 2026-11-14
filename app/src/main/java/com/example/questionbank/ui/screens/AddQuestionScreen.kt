@@ -128,6 +128,7 @@ fun AddQuestionScreen(
     val coroutineScope = rememberCoroutineScope()
     
     val vaults by viewModel.vaults.collectAsState()
+    val selectableVaults = vaults.filterNot { it.parentId == null && (it.name.equals("Biology", true) || it.name.equals("Chemistry", true)) }
     val selectedVault by viewModel.selectedVault.collectAsState()
     val questionText by viewModel.questionText.collectAsState()
     val options by viewModel.options.collectAsState()
@@ -235,7 +236,7 @@ fun AddQuestionScreen(
             // Vault Selection
             VaultSelector(
                 selectedVault = selectedVault,
-                vaults = vaults,
+                vaults = selectableVaults,
                 onClick = { showVaultDialog = true }
             )
             
@@ -415,7 +416,7 @@ fun AddQuestionScreen(
         // Vault Selection Dialog
         if (showVaultDialog) {
             VaultSelectionDialog(
-                vaults = vaults,
+                vaults = selectableVaults,
                 selectedVault = selectedVault,
                 onSelect = { vault ->
                     viewModel.setSelectedVault(vault)

@@ -1,4 +1,4 @@
-name: Build Android ARM64 APK
+name: Build Android ARM64 Release APK
 on:
   push:
     branches: [ main ]
@@ -36,19 +36,41 @@ jobs:
       uses: android-actions/setup-android@v4
       with:
         packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
-    - name: Build ARM64 APK
-      run: gradle assembleDebug --no-daemon --stacktrace
-    - name: Verify APK ABI
+    - name: Decode signing key, build and verify signed ARM64 APK
+      env:
+        ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        ANDROID_VERSION_CODE: ${{ github.run_number }}
+        ANDROID_VERSION_NAME: 1.0.${{ github.run_number }}
       run: |
-        APK=app/build/outputs/apk/debug/app-debug.apk
+        set -euo pipefail
+        : "${ANDROID_KEYSTORE_BASE64:?Missing ANDROID_KEYSTORE_BASE64 secret}"
+        : "${ANDROID_KEYSTORE_PASSWORD:?Missing ANDROID_KEYSTORE_PASSWORD secret}"
+        : "${ANDROID_KEY_ALIAS:?Missing ANDROID_KEY_ALIAS secret}"
+        : "${ANDROID_KEY_PASSWORD:?Missing ANDROID_KEY_PASSWORD secret}"
+
+        export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/neet-release.p12"
+        printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$ANDROID_KEYSTORE_PATH"
+        chmod 600 "$ANDROID_KEYSTORE_PATH"
+
+        keytool -list -keystore "$ANDROID_KEYSTORE_PATH" -storetype PKCS12 \
+          -alias "$ANDROID_KEY_ALIAS" -storepass:env ANDROID_KEYSTORE_PASSWORD
+
+        gradle assembleRelease --no-daemon --stacktrace
+
+        APK=app/build/outputs/apk/release/app-release.apk
+        test -s "$APK"
         unzip -Z1 "$APK" | grep -q '^lib/arm64-v8a/' || { echo "ARM64 native libraries were not packaged"; exit 1; }
         OTHER_ABIS=$(unzip -Z1 "$APK" | awk -F/ '$1 == "lib" {print $2}' | sort -u | grep -v '^arm64-v8a$' || true)
         if [ -n "$OTHER_ABIS" ]; then echo "Unexpected ABIs found: $OTHER_ABIS"; exit 1; fi
-    - name: Rename APK
-      run: mv app/build/outputs/apk/debug/app-debug.apk app-debug-arm64-${{ github.sha }}.apk
-    - name: Upload ARM64 APK
+
+        apksigner verify --verbose "$APK"
+        mv "$APK" "neet-question-bank-arm64-v${ANDROID_VERSION_CODE}.apk"
+    - name: Upload signed ARM64 APK
       uses: actions/upload-artifact@v6
       with:
-        name: debug-apk-arm64
-        path: app-debug-arm64-${{ github.sha }}.apk
+        name: release-apk-arm64-v${{ github.run_number }}
+        path: neet-question-bank-arm64-v${{ github.run_number }}.apk
         retention-days: 30

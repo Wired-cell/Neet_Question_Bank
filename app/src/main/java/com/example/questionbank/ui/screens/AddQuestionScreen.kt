@@ -129,7 +129,7 @@ fun AddQuestionScreen(
     val coroutineScope = rememberCoroutineScope()
     
     val vaults by viewModel.vaults.collectAsState()
-    val selectableVaults = vaults.filterNot { it.parentId == null && (it.name.equals("Biology", true) || it.name.equals("Chemistry", true)) }
+    val selectableVaults = vaults.filterNot { it.parentId == null && (it.name.equals("Biology", true) || it.name.equals("Chemistry", true)) }.sortedWith(compareBy<com.example.questionbank.model.Vault> { vault -> when { vault.name.equals("Physics", true) -> 0; vault.name.contains("Chemistry", true) -> 1; vault.name.equals("Zoology", true) -> 2; vault.name.equals("Botany", true) -> 3; else -> 4 } }.thenBy { it.name })
     val selectedVault by viewModel.selectedVault.collectAsState()
     val questionText by viewModel.questionText.collectAsState()
     val options by viewModel.options.collectAsState()

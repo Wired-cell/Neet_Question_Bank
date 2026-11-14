@@ -12,7 +12,7 @@ import com.example.questionbank.model.Vault
 
 @Database(
     entities = [Vault::class, Question::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(com.example.questionbank.model.Converters::class)
@@ -27,6 +27,14 @@ abstract class QuestionDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("UPDATE vaults SET name = 'Physical Chemistry' WHERE name = 'Physical'")
+                db.execSQL("UPDATE vaults SET name = 'Inorganic Chemistry' WHERE name = 'Inorganic'")
+                db.execSQL("UPDATE vaults SET name = 'Organic Chemistry' WHERE name = 'Organic'")
+            }
+        }
+
         @Volatile
         private var INSTANCE: QuestionDatabase? = null
 
@@ -37,7 +45,7 @@ abstract class QuestionDatabase : RoomDatabase() {
                     QuestionDatabase::class.java,
                     "question_bank_db"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                 INSTANCE = instance
                 instance

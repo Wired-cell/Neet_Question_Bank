@@ -164,14 +164,14 @@ fun VaultHierarchyList(
     onAddQuestionClick: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val rootVaults = vaults.filter { it.isRoot }
+    val rootVaults = vaults.filter { it.isRoot }.sortedBy { vault -> when (vault.name.lowercase()) { "physics" -> 0; "chemistry" -> 1; "biology" -> 2; else -> 3 } }
     
     LazyColumn(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(rootVaults) { rootVault ->
-            val subVaults = vaults.filter { it.parentId == rootVault.id }
+            val subVaults = vaults.filter { it.parentId == rootVault.id }.sortedBy { vault -> when (vault.name.lowercase()) { "physical chemistry" -> 0; "inorganic chemistry" -> 1; "organic chemistry" -> 2; "zoology" -> 0; "botany" -> 1; else -> 3 } }
             
             VaultCard(
                 vault = rootVault,
@@ -220,7 +220,7 @@ fun VaultCard(
                     colors = CardDefaults.cardColors(containerColor = Color(vault.color))
                 ) {
                     Text(
-                        text = vault.icon.ifEmpty { vault.name.take(1).uppercase() },
+                        text = vault.icon.ifEmpty { vaultIconFor(vault.name) },
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(8.dp),
@@ -292,7 +292,7 @@ fun SubVaultItem(
             colors = CardDefaults.cardColors(containerColor = Color(vault.color))
         ) {
             Text(
-                text = vault.icon.ifEmpty { vault.name.take(1).uppercase() },
+                text = vault.icon.ifEmpty { vaultIconFor(vault.name) },
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(8.dp),
@@ -321,4 +321,17 @@ fun SubVaultItem(
             )
         }
     }
+}
+
+
+private fun vaultIconFor(name: String): String = when (name.lowercase()) {
+    "physics" -> "⚛️"
+    "chemistry" -> "🧪"
+    "physical chemistry" -> "⚗️"
+    "inorganic chemistry" -> "🧬"
+    "organic chemistry" -> "🧫"
+    "biology" -> "🌿"
+    "zoology" -> "🐾"
+    "botany" -> "🌱"
+    else -> "📚"
 }

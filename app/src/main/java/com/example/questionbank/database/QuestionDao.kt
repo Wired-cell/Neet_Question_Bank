@@ -31,6 +31,9 @@ interface QuestionDao {
     @Query("SELECT * FROM questions")
     suspend fun getAllQuestionsOnce(): List<Question>
 
+    @Query("UPDATE questions SET isFavorite = :favorite WHERE id = :id")
+    suspend fun updateFavorite(id: Long, favorite: Boolean)
+
     @Query("UPDATE questions SET imageUri = NULL WHERE imageUri IS NOT NULL")
     suspend fun clearOriginalImageUris()
 

@@ -14,6 +14,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,6 +61,16 @@ fun SettingsScreen(
     var isTestingGemini by remember { mutableStateOf(false) }
     var geminiTestResult by remember { mutableStateOf<String?>(null) }
     var geminiTestSucceeded by remember { mutableStateOf<Boolean?>(null) }
+    var groqKey by remember { mutableStateOf(prefs.getString("groq_api_key", "") ?: "") }
+    var nvidiaKey by remember { mutableStateOf(prefs.getString("nvidia_api_key", "") ?: "") }
+    var groqModel by remember { mutableStateOf(prefs.getString("groq_model", "qwen/qwen3.8-27b") ?: "qwen/qwen3.8-27b") }
+    var nvidiaModel by remember { mutableStateOf(prefs.getString("nvidia_model", "nvidia/nemotron-3.5-super-vl-120b-a12b") ?: "nvidia/nemotron-3.5-super-vl-120b-a12b") }
+    var isTestingGroq by remember { mutableStateOf(false) }
+    var isTestingNvidia by remember { mutableStateOf(false) }
+    var groqTestResult by remember { mutableStateOf<String?>(null) }
+    var nvidiaTestResult by remember { mutableStateOf<String?>(null) }
+    var groqTestSucceeded by remember { mutableStateOf<Boolean?>(null) }
+    var nvidiaTestSucceeded by remember { mutableStateOf<Boolean?>(null) }
 
     Scaffold(
         topBar = {
@@ -189,6 +201,96 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ProviderApiCard(
+                title = "Groq API",
+                description = "Vision-capable model for explanations using question text and the cropped diagram.",
+                keyValue = groqKey,
+                keyPlaceholder = "Enter your Groq API key",
+                onKeyChange = {
+                    groqKey = it
+                    prefs.edit().putString("groq_api_key", it).apply()
+                    groqTestResult = null
+                    groqTestSucceeded = null
+                },
+                model = groqModel,
+                models = listOf("qwen/qwen3.8-27b", "meta-models/muse-spark-open"),
+                onModelChange = {
+                    groqModel = it
+                    prefs.edit().putString("groq_model", it).apply()
+                },
+                isTesting = isTestingGroq,
+                result = groqTestResult,
+                succeeded = groqTestSucceeded,
+                onTest = {
+                    val key = groqKey.trim()
+                    if (key.isNotEmpty() && !isTestingGroq) {
+                        prefs.edit().putString("groq_api_key", key).apply()
+                        isTestingGroq = true
+                        groqTestResult = null
+                        groqTestSucceeded = null
+                        scope.launch {
+                            try {
+                                val answer = withContext(Dispatchers.IO) {
+                                    runOpenAiCompatibleTest(key, groqModel, "https://api.groq.com/openai/v1/chat/completions")
+                                }
+                                groqTestSucceeded = true
+                                groqTestResult = "Groq connection successful!\n\n$answer"
+                            } catch (e: Exception) {
+                                groqTestSucceeded = false
+                                groqTestResult = "Groq test failed: ${e.message ?: "Unknown error"}"
+                            } finally { isTestingGroq = false }
+                        }
+                    }
+                }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ProviderApiCard(
+                title = "NVIDIA Build API",
+                description = "Vision-capable NVIDIA NIM model for explanations using question text and the cropped diagram.",
+                keyValue = nvidiaKey,
+                keyPlaceholder = "Enter your NVIDIA Build API key",
+                onKeyChange = {
+                    nvidiaKey = it
+                    prefs.edit().putString("nvidia_api_key", it).apply()
+                    nvidiaTestResult = null
+                    nvidiaTestSucceeded = null
+                },
+                model = nvidiaModel,
+                models = listOf("nvidia/nemotron-3.5-super-vl-120b-a12b", "stepfun-ai/step-5-preview"),
+                onModelChange = {
+                    nvidiaModel = it
+                    prefs.edit().putString("nvidia_model", it).apply()
+                },
+                isTesting = isTestingNvidia,
+                result = nvidiaTestResult,
+                succeeded = nvidiaTestSucceeded,
+                onTest = {
+                    val key = nvidiaKey.trim()
+                    if (key.isNotEmpty() && !isTestingNvidia) {
+                        prefs.edit().putString("nvidia_api_key", key).apply()
+                        isTestingNvidia = true
+                        nvidiaTestResult = null
+                        nvidiaTestSucceeded = null
+                        scope.launch {
+                            try {
+                                val answer = withContext(Dispatchers.IO) {
+                                    runOpenAiCompatibleTest(key, nvidiaModel, "https://integrate.api.nvidia.com/v1/chat/completions")
+                                }
+                                nvidiaTestSucceeded = true
+                                nvidiaTestResult = "NVIDIA Build connection successful!\n\n$answer"
+                            } catch (e: Exception) {
+                                nvidiaTestSucceeded = false
+                                nvidiaTestResult = "NVIDIA Build test failed: ${e.message ?: "Unknown error"}"
+                            } finally { isTestingNvidia = false }
+                        }
+                    }
+                }
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 

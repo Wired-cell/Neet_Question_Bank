@@ -10,6 +10,7 @@ import com.example.questionbank.database.VaultDao
 import com.example.questionbank.ui.screens.AddQuestionScreen
 import com.example.questionbank.ui.screens.QuestionListScreen
 import com.example.questionbank.ui.screens.SettingsScreen
+import com.example.questionbank.ui.screens.SolutionScreen
 import com.example.questionbank.ui.screens.TestScreen
 import com.example.questionbank.ui.screens.VaultListScreen
 
@@ -48,11 +49,16 @@ fun AppNavigation(vaultDao: VaultDao, questionDao: QuestionDao, darkTheme: Boole
                 vaultId = vaultId,
                 questionDao = questionDao,
                 vaultDao = vaultDao,
+                darkTheme = darkTheme,
+                darcula = darcula,
                 onNavigateToAddQuestion = { 
                     navController.navigate("addQuestion/$vaultId")
                 },
                 onNavigateToEditQuestion = { questionId ->
                     navController.navigate("addQuestion/$vaultId?questionId=$questionId")
+                },
+                onNavigateToSolution = { questionId ->
+                    navController.navigate("solution/$questionId")
                 },
                 onBack = { navController.popBackStack() }
             )
@@ -80,6 +86,20 @@ fun AppNavigation(vaultDao: VaultDao, questionDao: QuestionDao, darkTheme: Boole
             )
         }
         
+        
+        composable(
+            route = "solution/{questionId}",
+            arguments = listOf(navArgument("questionId") { type = androidx.navigation.NavType.LongType })
+        ) { backStackEntry ->
+            val questionId = backStackEntry.arguments?.getLong("questionId") ?: 0L
+            SolutionScreen(
+                questionId = questionId,
+                questionDao = questionDao,
+                darkTheme = darkTheme,
+                darcula = darcula,
+                onBack = { navController.popBackStack() }
+            )
+        }
         composable("settings") {
             SettingsScreen(
                 darcula = darcula,

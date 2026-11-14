@@ -146,7 +146,7 @@ private fun TestSetupScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("Choose question banks", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text("Physics and individual Chemistry sub-vaults are selectable. Biology, Botany, Zoology, and the Chemistry parent are excluded. Chemistry selections share 45 questions.")
+        Text("Physics, the Chemistry sub-vaults, and Biology are selectable. Choosing Biology includes 45 Zoology and 45 Botany questions. Chemistry selections share 45 questions.")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             OutlinedButton(onClick = vm::selectAllLeafVaults, modifier = Modifier.weight(1f)) { Text("Select all") }
             OutlinedButton(onClick = vm::deselectAllVaults, modifier = Modifier.weight(1f)) { Text("Clear") }

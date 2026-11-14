@@ -53,6 +53,8 @@ class TestViewModel(
 
     private val _chemistryWeights = MutableStateFlow<Map<Long, Int>>(emptyMap())
     val chemistryWeights: StateFlow<Map<Long, Int>> = _chemistryWeights.asStateFlow()
+    private val _answerMap = MutableStateFlow<Map<Long, Int>>(emptyMap())
+    val answerMap: StateFlow<Map<Long, Int>> = _answerMap.asStateFlow()
     private val _correctQuestions = MutableStateFlow<List<Question>>(emptyList())
     val correctQuestions: StateFlow<List<Question>> = _correctQuestions.asStateFlow()
     private val _incorrectQuestions = MutableStateFlow<List<Question>>(emptyList())
@@ -110,6 +112,7 @@ class TestViewModel(
             _currentQuestionIndex.value = 0
             _score.value = 0
             answers.clear()
+            _answerMap.value = emptyMap()
             _correctQuestions.value = emptyList()
             _incorrectQuestions.value = emptyList()
             _unattendedQuestions.value = emptyList()
@@ -212,6 +215,7 @@ class TestViewModel(
     private fun finishTest() {
         stopTimer()
         val all = _questions.value
+        _answerMap.value = answers.toMap()
         _correctQuestions.value = all.filter { q -> answers[q.id] != null && answers[q.id] == q.correctOptionIndex }
         _incorrectQuestions.value = all.filter { q -> answers[q.id] != null && answers[q.id] != q.correctOptionIndex }
         _unattendedQuestions.value = all.filter { q -> answers[q.id] == null }

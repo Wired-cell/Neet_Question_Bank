@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -55,6 +56,8 @@ import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.questionbank.database.QuestionDao
@@ -83,6 +86,7 @@ fun QuestionListScreen(
     var vault by remember { mutableStateOf<Vault?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(vaultId) {
         vaultDao.getVaultById(vaultId).collect { v ->
@@ -170,13 +174,14 @@ fun QuestionListScreen(
                     modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(visibleQuestions, key = { it.id }) { question ->
+                    itemsIndexed(visibleQuestions, key = { _, question -> question.id }) { index, question ->
                         QuestionCard(
                             question = question,
+                            questionNumber = index + 1,
                             darkTheme = darkTheme || darcula,
                             onEditClick = { onNavigateToEditQuestion(question.id) },
                             onFavoriteClick = {
-                                // Favorite persistence can be wired to the DAO separately.
+                                scope.launch { questionDao.updateFavorite(question.id, !question.isFavorite) }
                             },
                             onSolutionClick = { onNavigateToSolution(question.id) }
                         )
@@ -190,6 +195,7 @@ fun QuestionListScreen(
 @Composable
 fun QuestionCard(
     question: Question,
+    questionNumber: Int,
     darkTheme: Boolean,
     onEditClick: () -> Unit,
     onFavoriteClick: () -> Unit,
@@ -210,21 +216,17 @@ fun QuestionCard(
         ) {
             Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth()) {
                 Text(
+                    text = questionNumber.toString() + ".",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.size(8.dp))
+                Text(
                     text = question.questionText,
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = onEditClick) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit question")
-                }
-                IconButton(onClick = onFavoriteClick) {
-                    Icon(
-                        if (question.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                        contentDescription = "Favorite",
-                        tint = if (question.isFavorite) MaterialTheme.colorScheme.error
-                            else MaterialTheme.colorScheme.onSurface
-                    )
-                }
             }
 
             if (image != null) {
@@ -275,14 +277,26 @@ fun QuestionCard(
                 }
             }
 
-            Text(
-                text = "Solution",
-                modifier = Modifier.align(Alignment.End).clip(MaterialTheme.shapes.small)
-                    .clickable(onClick = onSolutionClick).padding(horizontal = 12.dp, vertical = 8.dp),
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold
-            )
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Solution",
+                    modifier = Modifier.weight(1f).clip(MaterialTheme.shapes.small)
+                        .clickable(onClick = onSolutionClick).padding(vertical = 8.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                IconButton(onClick = onEditClick) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit question")
+                }
+                IconButton(onClick = onFavoriteClick) {
+                    Icon(
+                        if (question.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "Favorite",
+                        tint = if (question.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
         }
     }
 }

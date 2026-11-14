@@ -80,6 +80,7 @@ fun TestScreen(
     val timeRemaining by vm.timeRemaining.collectAsState()
     val score by vm.score.collectAsState()
     val chemistryWeights by vm.chemistryWeights.collectAsState()
+    val answerMap by vm.answerMap.collectAsState()
     val correct by vm.correctQuestions.collectAsState()
     val incorrect by vm.incorrectQuestions.collectAsState()
     val unattended by vm.unattendedQuestions.collectAsState()
@@ -106,6 +107,7 @@ fun TestScreen(
                 score = score,
                 totalQuestions = total,
                 correct = correct,
+                answerMap = answerMap,
                 incorrect = incorrect,
                 unattended = unattended,
                 onSolution = onNavigateToSolution,
@@ -264,6 +266,7 @@ private fun TestResultScreen(
     score: Int,
     totalQuestions: Int,
     correct: List<Question>,
+    answerMap: Map<Long, Int>,
     incorrect: List<Question>,
     unattended: List<Question>,
     onSolution: (Long) -> Unit,
@@ -294,7 +297,7 @@ private fun TestResultScreen(
         if (expanded.isNotEmpty()) {
             Text("$expanded questions", style = MaterialTheme.typography.titleMedium)
             visible.forEachIndexed { index, question ->
-                ResultQuestionCard(index + 1, question, onSolution)
+                ResultQuestionCard(index + 1, question, answerMap[question.id], onSolution)
             }
             if (visible.isEmpty()) Text("No questions in this category.")
         }
@@ -310,7 +313,7 @@ private fun TestResultScreen(
 }
 
 @Composable
-private fun ResultQuestionCard(number: Int, question: Question, onSolution: (Long) -> Unit) {
+private fun ResultQuestionCard(number: Int, question: Question, selectedAnswer: Int?, onSolution: (Long) -> Unit) {
     ElevatedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("$number. ${question.questionText}", style = MaterialTheme.typography.bodyLarge)
@@ -320,8 +323,9 @@ private fun ResultQuestionCard(number: Int, question: Question, onSolution: (Lon
             }
             question.options.forEachIndexed { index, option ->
                 val isCorrect = index == question.correctOptionIndex
-                val container = if (isCorrect) Color(0xFF1B5E20) else MaterialTheme.colorScheme.surfaceVariant
-                val textColor = if (isCorrect) Color.White else MaterialTheme.colorScheme.onSurface
+                val isWrongSelection = selectedAnswer == index && selectedAnswer != question.correctOptionIndex
+                val container = when { isCorrect -> Color(0xFF1B5E20); isWrongSelection -> Color(0xFFB71C1C); else -> MaterialTheme.colorScheme.surfaceVariant }
+                val textColor = if (isCorrect || isWrongSelection) Color.White else MaterialTheme.colorScheme.onSurface
                 Text(option, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(container).padding(10.dp), color = textColor)
             }
             Text(

@@ -385,7 +385,7 @@ fun AddQuestionScreen(
                             }
                         }
                     }
-                    viewModel.fetchExplanation(questionWithOptions, context, diagramUri)
+                    viewModel.fetchExplanation(questionWithOptions, context, diagramUri, provider)
                 }
             )
             
@@ -1106,8 +1106,30 @@ fun ExplanationSection(
     explanation: String,
     isFetching: Boolean,
     onExplanationChange: (String) -> Unit,
-    onFetchClick: () -> Unit
+    onFetchClick: (String) -> Unit
 ) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
+    val availableProviders = remember {
+        buildList {
+            if (!prefs.getString("google_ai_key", "").isNullOrBlank()) add("Gemini")
+            if (!prefs.getString("groq_api_key", "").isNullOrBlank()) add("Groq")
+            if (!prefs.getString("nvidia_api_key", "").isNullOrBlank()) add("NVIDIA Build")
+        }
+    }
+    var selectedProvider by remember {
+        mutableStateOf(
+            prefs.getString("selected_ai_provider", null)
+                ?.takeIf { it in availableProviders }
+                ?: availableProviders.firstOrNull().orEmpty()
+        )
+    }
+    var providerMenuExpanded by remember { mutableStateOf(false) }
+    val selectedModel = when (selectedProvider) {
+        "Groq" -> prefs.getString("groq_model", "qwen/qwen3.8-27b")
+        "NVIDIA Build" -> prefs.getString("nvidia_model", "nvidia/nemotron-3.5-super-vl-120b-a12b")
+        else -> "gemini-3.8-flash"
+    }
     Column(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -1121,7 +1143,35 @@ fun ExplanationSection(
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.weight(1f))
-            FilledTonalButton(onClick = onFetchClick, enabled = !isFetching) {
+            Box {
+                OutlinedButton(
+                    onClick = { providerMenuExpanded = true },
+                    enabled = availableProviders.isNotEmpty() && !isFetching,
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Text(selectedProvider.ifBlank { "Provider" }, maxLines = 1, style = MaterialTheme.typography.labelMedium)
+                    Icon(Icons.Default.ArrowDropDown, contentDescription = "Select provider")
+                }
+                DropdownMenu(
+                    expanded = providerMenuExpanded,
+                    onDismissRequest = { providerMenuExpanded = false }
+                ) {
+                    availableProviders.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option) },
+                            onClick = {
+                                selectedProvider = option
+                                prefs.edit().putString("selected_ai_provider", option).apply()
+                                providerMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+            FilledTonalButton(
+                onClick = { if (selectedProvider.isNotBlank()) onFetchClick(selectedProvider) },
+                enabled = !isFetching && selectedProvider.isNotBlank()
+            ) {
                 if (isFetching) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(18.dp),
@@ -1133,6 +1183,19 @@ fun ExplanationSection(
                 Spacer(modifier = Modifier.size(4.dp))
                 Text(if (isFetching) "Generating..." else "Fetch solution")
             }
+        }
+        if (selectedProvider.isNotBlank()) {
+            Text(
+                text = "Model: $selectedModel",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        } else {
+            Text(
+                text = "Add an API key for Gemini, Groq, or NVIDIA Build in Settings to enable AI explanations.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
         }
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(

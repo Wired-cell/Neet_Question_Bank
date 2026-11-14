@@ -136,6 +136,7 @@ fun AddQuestionScreen(
     val explanation by viewModel.explanation.collectAsState()
     val imageUri by viewModel.imageUri.collectAsState()
     val diagramUri by viewModel.diagramUri.collectAsState()
+    val solutionImageUri by viewModel.solutionImageUri.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val isFetchingExplanation by viewModel.isFetchingExplanation.collectAsState()
@@ -167,6 +168,21 @@ fun AddQuestionScreen(
         uri?.let { 
             viewModel.importQuestionImage(context, it)
         }
+    }
+
+    var pendingSolutionCaptureUri by remember { mutableStateOf<Uri?>(null) }
+    val solutionCameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) pendingSolutionCaptureUri?.let { viewModel.importSolutionImage(context, it) }
+    }
+    val solutionGalleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri -> uri?.let { viewModel.importSolutionImage(context, it) } }
+    val requestSolutionCameraPermission = PermissionUtils.rememberCameraPermission {
+        val uri = createImageUri(context)
+        pendingSolutionCaptureUri = uri
+        solutionCameraLauncher.launch(uri)
     }
     
     // Cropper launcher for diagram cropping
@@ -374,8 +390,12 @@ fun AddQuestionScreen(
             // Explanation Section
             ExplanationSection(
                 explanation = explanation,
+                solutionImageUri = solutionImageUri,
                 isFetching = isFetchingExplanation,
                 onExplanationChange = viewModel::setExplanation,
+                onCameraClick = requestSolutionCameraPermission,
+                onGalleryClick = { solutionGalleryLauncher.launch("image/*") },
+                onRemoveSolutionImage = { viewModel.removeSolutionImage(context) },
                 onFetchClick = { provider ->
                     val questionWithOptions = buildString {
                         append(questionText)

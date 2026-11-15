@@ -119,6 +119,8 @@ fun AddQuestionScreen(
     questionId: Long?,
     vaultDao: VaultDao,
     questionDao: QuestionDao,
+    incomingImageUri: Uri? = null,
+    onSharedImageConsumed: () -> Unit = {},
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -141,6 +143,13 @@ fun AddQuestionScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val isFetchingExplanation by viewModel.isFetchingExplanation.collectAsState()
+
+    LaunchedEffect(incomingImageUri) {
+        incomingImageUri?.let { uri ->
+            viewModel.importQuestionImage(context, uri)
+            onSharedImageConsumed()
+        }
+    }
     
     var showVaultDialog by remember { mutableStateOf(false) }
     var showImageSourceDialog by remember { mutableStateOf(false) }

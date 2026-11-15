@@ -631,11 +631,15 @@ class AddQuestionViewModel(
             )
         }
 
-        val body = JSONObject()
+        val bodyJson = JSONObject()
             .put("model", model)
             .put("messages", org.json.JSONArray().put(JSONObject().put("role", "user").put("content", content)))
             .put("temperature", 0.2)
-            .toString()
+            .put("max_completion_tokens", 4096)
+        if (model.startsWith("openai/gpt-oss-")) {
+            bodyJson.put("reasoning_effort", "low")
+        }
+        val body = bodyJson.toString()
 
         val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
@@ -663,13 +667,18 @@ class AddQuestionViewModel(
                 throw IllegalStateException(message ?: "$providerName returned HTTP $status.")
             }
             val response = JSONObject(responseText)
-            val answerValue = response.optJSONArray("choices")
-                ?.optJSONObject(0)?.optJSONObject("message")?.opt("content")
+            val choice = response.optJSONArray("choices")?.optJSONObject(0)
+                ?: throw IllegalStateException("$providerName returned no answer choice.")
+            val finishReason = choice.optString("finish_reason")
+            if (finishReason == "length") {
+                throw IllegalStateException("$providerName stopped because it reached its response limit. Please try again or choose a model with a larger output allowance.")
+            }
+            val answerValue = choice.optJSONObject("message")?.opt("content")
             val answer = when (answerValue) {
                 is String -> answerValue
                 is org.json.JSONArray -> (0 until answerValue.length())
                     .mapNotNull { answerValue.optJSONObject(it)?.optString("text") }
-                    .filter { it.isNotBlank() }.joinToString("\\n")
+                    .filter { it.isNotBlank() }.joinToString("\n")
                 else -> ""
             }.trim()
             if (answer.isBlank()) throw IllegalStateException("$providerName returned an empty explanation.")

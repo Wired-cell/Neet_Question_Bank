@@ -65,9 +65,9 @@ fun SettingsScreen(
     var groqKey by remember { mutableStateOf(prefs.getString("groq_api_key", "") ?: "") }
     var nvidiaKey by remember { mutableStateOf(prefs.getString("nvidia_api_key", "") ?: "") }
     var geminiModel by remember { mutableStateOf(prefs.getString("gemini_model", "gemini-3.8-flash") ?: "gemini-3.8-flash") }
-    var groqModel by remember { mutableStateOf(prefs.getString("groq_model", "qwen/qwen3.8-27b") ?: "qwen/qwen3.8-27b") }
+    var groqModel by remember { mutableStateOf(prefs.getString("groq_model", "openai/gpt-oss-120b") ?: "openai/gpt-oss-120b") }
     val geminiModels = listOf("gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite")
-    val groqModels = listOf("qwen/qwen3.8-27b", "meta-models/muse-spark-open", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.1-8b-instant", "llama-3.3-70b-versatile", "minimaxai/minimax-m2.7")
+    val groqModels = listOf("openai/gpt-oss-120b", "openai/gpt-oss-20b", "openai/gpt-oss-safeguard-20b", "qwen/qwen3.8-27b")
     var nvidiaModel by remember { mutableStateOf(prefs.getString("nvidia_model", "nvidia/nemotron-3.5-super-vl-120b-a12b") ?: "nvidia/nemotron-3.5-super-vl-120b-a12b") }
     var isTestingGroq by remember { mutableStateOf(false) }
     var isTestingNvidia by remember { mutableStateOf(false) }
@@ -227,7 +227,7 @@ fun SettingsScreen(
 
             ProviderApiCard(
                 title = "Groq API",
-                description = "Available Groq chat models. Qwen and Muse Spark support images; other models answer from question text only.",
+                description = "Chat-capable models shown in your Groq console. Qwen supports images; GPT-OSS models use question text only. Audio and moderation-only models are not question-answering models.",
                 keyValue = groqKey,
                 keyPlaceholder = "Enter your Groq API key",
                 onKeyChange = {

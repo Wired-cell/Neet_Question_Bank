@@ -523,7 +523,7 @@ class AddQuestionViewModel(
                         else -> {
                             val key = prefs.getString("google_ai_key", "")?.trim().orEmpty()
                             if (key.isBlank()) throw IllegalStateException("Add your Google AI Studio API key in Settings first.")
-                            requestGeminiExplanation(key, query, context, sourceImageUri)
+                            requestGeminiExplanation(key, query, context, sourceImageUri, prefs.getString("gemini_model", "gemini-3.8-flash") ?: "gemini-3.8-flash")
                         }
                     }
                 }
@@ -569,6 +569,19 @@ class AddQuestionViewModel(
             and relationships carefully. Never invent missing information or assume this is a
             familiar textbook problem. If an important detail is unreadable, briefly say what
             cannot be determined and explain what can still be solved.
+
+            Accuracy rules (follow these before writing):
+            - Do not assume an object starts from rest merely because the question says "placed".
+              Use zero initial velocity only when the question explicitly says it starts from rest
+              or when the given information proves it.
+            - For constant acceleration, calculate initial and final velocity from the actual
+              displacement and time. Do not automatically claim average velocity is half the
+              final velocity unless initial velocity is zero.
+            - Calculate average power from total work divided by elapsed time, and instantaneous
+              power from F · v at the specified instant. Compute both independently.
+            - Check units, vector components, signs, arithmetic, and answer choices. If supplied
+              data appear inconsistent, say so rather than silently changing an assumption.
+            - Never choose an option just because it resembles a familiar textbook result.
 
             Write the explanation like a helpful teacher:
             1. Start with the key idea or principle in one short sentence. Skip generic introductions.
@@ -668,7 +681,8 @@ class AddQuestionViewModel(
         apiKey: String,
         question: String,
         context: Context,
-        sourceImageUri: Uri?
+        sourceImageUri: Uri?,
+        model: String
     ): String {
         val imageInstruction = if (sourceImageUri == null) {
             "No diagram image is attached. Solve using the saved question text and answer choices below."
@@ -684,6 +698,19 @@ class AddQuestionViewModel(
             and relationships carefully. Never invent missing information or assume this is a
             familiar textbook problem. If an important detail is unreadable, briefly say what
             cannot be determined and explain what can still be solved.
+
+            Accuracy rules (follow these before writing):
+            - Do not assume an object starts from rest merely because the question says "placed".
+              Use zero initial velocity only when the question explicitly says it starts from rest
+              or when the given information proves it.
+            - For constant acceleration, calculate initial and final velocity from the actual
+              displacement and time. Do not automatically claim average velocity is half the
+              final velocity unless initial velocity is zero.
+            - Calculate average power from total work divided by elapsed time, and instantaneous
+              power from F · v at the specified instant. Compute both independently.
+            - Check units, vector components, signs, arithmetic, and answer choices. If supplied
+              data appear inconsistent, say so rather than silently changing an assumption.
+            - Never choose an option just because it resembles a familiar textbook result.
 
             Write the explanation like a helpful teacher:
             1. Start with the key idea or principle in one short sentence. Skip generic introductions.
@@ -737,7 +764,7 @@ class AddQuestionViewModel(
 
         // Background mode avoids holding one long HTTP connection open during generation.
         val createBody = JSONObject()
-            .put("model", "gemini-3.8-flash")
+            .put("model", model)
             .put("input", input)
             .put("background", true)
         val created = executeGeminiRequest(

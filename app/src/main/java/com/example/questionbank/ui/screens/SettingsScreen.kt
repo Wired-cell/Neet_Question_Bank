@@ -181,7 +181,7 @@ fun SettingsScreen(
                                 scope.launch {
                                     try {
                                         val response = withContext(Dispatchers.IO) {
-                                            runGeminiConnectionTest(keyToTest)
+                                            runGeminiConnectionTest(keyToTest, geminiModel)
                                         }
                                         geminiTestSucceeded = true
                                         geminiTestResult = "Gemini connection successful!\n\n$response"
@@ -350,73 +350,94 @@ fun SettingsScreen(
     }
 }
 
-private fun runGeminiConnectionTest(apiKey: String): String {
+private fun runGeminiConnectionTest(apiKey: String, model: String): String {
     val prompt = "Introduce yourself briefly as the AI assistant in this app. Then answer this exact question: how many letter r's are in the word strawberry? Count the letters carefully."
     val body = JSONObject()
-        .put("model", "gemini-3.8-flash")
+        .put("model", model)
         .put("input", prompt)
+        .put("background", true)
         .toString()
 
-    val connection = (URL("https://generativelanguage.googleapis.com/v1beta/interactions")
-        .openConnection() as HttpURLConnection).apply {
-        requestMethod = "POST"
-        connectTimeout = 10000
-        readTimeout = 25000
-        doOutput = true
-        useCaches = false
-        setRequestProperty("Connection", "close")
-        setRequestProperty("x-goog-api-key", apiKey)
-        setRequestProperty("Api-Revision", "2026-05-20")
-        setRequestProperty("Accept", "application/json")
-        setRequestProperty("Content-Type", "application/json; charset=utf-8")
+    fun request(url: URL, method: String, requestBody: String? = null): JSONObject {
+        val connection = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = method
+            connectTimeout = 20000
+            readTimeout = 30000
+            doOutput = requestBody != null
+            useCaches = false
+            setRequestProperty("Connection", "close")
+            setRequestProperty("x-goog-api-key", apiKey)
+            setRequestProperty("Api-Revision", "2026-05-20")
+            setRequestProperty("Accept", "application/json")
+            if (requestBody != null) setRequestProperty("Content-Type", "application/json; charset=utf-8")
+        }
+        try {
+            if (requestBody != null) {
+                val bytes = requestBody.toByteArray(Charsets.UTF_8)
+                connection.setFixedLengthStreamingMode(bytes.size)
+                connection.outputStream.use { it.write(bytes) }
+            }
+            val statusCode = connection.responseCode
+            val responseText = (if (statusCode in 200..299) connection.inputStream else connection.errorStream)
+                ?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (statusCode !in 200..299) {
+                val message = runCatching { JSONObject(responseText).optJSONObject("error")?.optString("message") }
+                    .getOrNull()?.takeIf { it.isNotBlank() }
+                throw IllegalStateException(message ?: "Google AI Studio returned HTTP $statusCode.")
+            }
+            if (responseText.isBlank()) throw IllegalStateException("Google returned an empty response.")
+            return JSONObject(responseText)
+        } finally {
+            connection.disconnect()
+        }
     }
 
-    try {
-        val bytes = body.toByteArray(Charsets.UTF_8)
-        connection.setFixedLengthStreamingMode(bytes.size)
-        connection.outputStream.use { it.write(bytes) }
-
-        val status = connection.responseCode
-        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-        val responseText = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-        if (status !in 200..299) {
-            val message = runCatching {
-                JSONObject(responseText).optJSONObject("error")?.optString("message")
-            }.getOrNull()?.takeIf { it.isNotBlank() }
-            throw IllegalStateException(message ?: "Google AI Studio returned HTTP $status.")
+    val created = request(URL("https://generativelanguage.googleapis.com/v1beta/interactions"), "POST", body)
+    val interactionId = created.optString("id")
+    var result = created
+    when (created.optString("status")) {
+        "completed" -> Unit
+        "failed", "cancelled", "incomplete", "budget_exceeded" ->
+            throw IllegalStateException("Gemini test ended with status '${created.optString("status")}'.")
+        else -> {
+            if (interactionId.isBlank()) throw IllegalStateException("Google accepted the test but returned no interaction ID.")
+            val started = System.currentTimeMillis()
+            var delayMs = 5000L
+            while (System.currentTimeMillis() - started < 10 * 60 * 1000L) {
+                Thread.sleep(delayMs)
+                result = request(URL("https://generativelanguage.googleapis.com/v1beta/interactions/$interactionId"), "GET")
+                when (result.optString("status")) {
+                    "completed" -> break
+                    "failed", "cancelled", "incomplete", "budget_exceeded" ->
+                        throw IllegalStateException("Gemini test ended with status '${result.optString("status")}'.")
+                }
+                delayMs = (delayMs * 2).coerceAtMost(15000L)
+            }
+            if (result.optString("status") != "completed") {
+                throw java.net.SocketTimeoutException("Gemini accepted the test but is still processing after 10 minutes. The request was not sent again.")
+            }
         }
+    }
 
-        val response = JSONObject(responseText)
-        if (response.optString("status") != "completed") {
-            throw IllegalStateException(
-                "Google accepted the test but did not complete it immediately. Try again in a moment."
-            )
-        }
-
-        val steps = response.optJSONArray("steps")
-            ?: throw IllegalStateException("Gemini returned no output steps.")
-        val answer = buildString {
-            for (i in 0 until steps.length()) {
-                val step = steps.optJSONObject(i) ?: continue
-                if (step.optString("type") != "model_output") continue
-                val content = step.optJSONArray("content") ?: continue
-                for (j in 0 until content.length()) {
-                    val item = content.optJSONObject(j) ?: continue
-                    val text = item.optString("text")
-                    if (item.optString("type") == "text" && text.isNotBlank()) {
-                        if (isNotEmpty()) append("\n")
-                        append(text)
-                    }
+    val steps = result.optJSONArray("steps") ?: throw IllegalStateException("Gemini completed but returned no output steps.")
+    val answer = buildString {
+        for (i in 0 until steps.length()) {
+            val step = steps.optJSONObject(i) ?: continue
+            if (step.optString("type") != "model_output") continue
+            val content = step.optJSONArray("content") ?: continue
+            for (j in 0 until content.length()) {
+                val item = content.optJSONObject(j) ?: continue
+                val text = item.optString("text")
+                if (item.optString("type") == "text" && text.isNotBlank()) {
+                    if (isNotEmpty()) append("\\n")
+                    append(text)
                 }
             }
-        }.trim()
-        if (answer.isBlank()) throw IllegalStateException("Gemini returned an empty answer.")
-        return answer
-    } finally {
-        connection.disconnect()
-    }
+        }
+    }.trim()
+    if (answer.isBlank()) throw IllegalStateException("Gemini completed the test but returned no text.")
+    return answer
 }
-
 
 @Composable
 private fun ProviderApiCard(

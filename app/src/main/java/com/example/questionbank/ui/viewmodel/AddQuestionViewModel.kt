@@ -555,10 +555,12 @@ class AddQuestionViewModel(
         sourceImageUri: Uri?,
         providerName: String
     ): String {
-        val imageInstruction = if (sourceImageUri == null) {
-            "No diagram image is attached. Solve using the saved question text and answer choices below."
-        } else {
-            "Use the attached cropped diagram together with the saved and edited question text and answer choices below. The diagram is the only image source."
+        val canSendImage = sourceImageUri != null &&
+            (providerName != "Groq" || model in listOf("qwen/qwen3.8-27b", "meta-models/muse-spark-open"))
+        val imageInstruction = when {
+            canSendImage -> "Use the attached cropped diagram together with the saved and edited question text and answer choices below. The diagram is the only image source."
+            sourceImageUri != null -> "The selected model does not accept images. Solve using the saved question text and answer choices only; do not guess unseen diagram details."
+            else -> "No diagram image is attached. Solve using the saved question text and answer choices below."
         }
         val prompt = """
             Act as a friendly, patient science tutor explaining this to a student. Be natural,
@@ -613,7 +615,7 @@ class AddQuestionViewModel(
         """.trimIndent()
 
         val content = org.json.JSONArray().put(JSONObject().put("type", "text").put("text", prompt))
-        if (sourceImageUri != null) {
+        if (canSendImage && sourceImageUri != null) {
             val resolver = context.contentResolver
             val imageBytes = resolver.openInputStream(sourceImageUri)?.use { it.readBytes() }
                 ?: throw java.io.IOException("Could not read the saved cropped diagram.")

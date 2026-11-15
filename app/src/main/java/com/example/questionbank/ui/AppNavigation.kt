@@ -1,6 +1,8 @@
 package com.example.questionbank.ui
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -15,8 +17,11 @@ import com.example.questionbank.ui.screens.TestScreen
 import com.example.questionbank.ui.screens.VaultListScreen
 
 @Composable
-fun AppNavigation(vaultDao: VaultDao, questionDao: QuestionDao, darkTheme: Boolean, darcula: Boolean, onDarkThemeChange: (Boolean) -> Unit, onDarculaChange: (Boolean) -> Unit) {
+fun AppNavigation(vaultDao: VaultDao, questionDao: QuestionDao, darkTheme: Boolean, darcula: Boolean, onDarkThemeChange: (Boolean) -> Unit, onDarculaChange: (Boolean) -> Unit, sharedImageUri: Uri? = null, onSharedImageConsumed: () -> Unit = {}) {
     val navController = rememberNavController()
+    LaunchedEffect(sharedImageUri) {
+        if (sharedImageUri != null) navController.navigate("addQuestion/1") { launchSingleTop = true }
+    }
     
     NavHost(
         navController = navController,
@@ -82,6 +87,8 @@ fun AppNavigation(vaultDao: VaultDao, questionDao: QuestionDao, darkTheme: Boole
                 questionId = questionId,
                 vaultDao = vaultDao,
                 questionDao = questionDao,
+                incomingImageUri = sharedImageUri,
+                onSharedImageConsumed = onSharedImageConsumed,
                 onBack = { navController.popBackStack() }
             )
         }

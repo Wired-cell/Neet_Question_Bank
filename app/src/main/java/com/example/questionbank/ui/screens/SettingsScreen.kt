@@ -227,7 +227,7 @@ fun SettingsScreen(
 
             ProviderApiCard(
                 title = "Groq API",
-                description = "Vision-capable model for explanations using question text and the cropped diagram.",
+                description = "Available Groq chat models. Qwen and Muse Spark support images; other models answer from question text only.",
                 keyValue = groqKey,
                 keyPlaceholder = "Enter your Groq API key",
                 onKeyChange = {
@@ -429,7 +429,7 @@ private fun runGeminiConnectionTest(apiKey: String, model: String): String {
                 val item = content.optJSONObject(j) ?: continue
                 val text = item.optString("text")
                 if (item.optString("type") == "text" && text.isNotBlank()) {
-                    if (isNotEmpty()) append("\\n")
+                    if (isNotEmpty()) append("\n")
                     append(text)
                 }
             }

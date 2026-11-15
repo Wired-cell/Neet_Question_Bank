@@ -504,7 +504,7 @@ class AddQuestionViewModel(
                         "Groq" -> {
                             val key = prefs.getString("groq_api_key", "")?.trim().orEmpty()
                             if (key.isBlank()) throw IllegalStateException("Add your Groq API key in Settings first.")
-                            val model = prefs.getString("groq_model", "qwen/qwen3.8-27b") ?: "qwen/qwen3.8-27b"
+                            val model = prefs.getString("groq_model", "openai/gpt-oss-120b") ?: "openai/gpt-oss-120b"
                             requestOpenAiCompatibleExplanation(
                                 key, model, "https://api.groq.com/openai/v1/chat/completions",
                                 query, context, sourceImageUri, "Groq"
@@ -556,7 +556,7 @@ class AddQuestionViewModel(
         providerName: String
     ): String {
         val canSendImage = sourceImageUri != null &&
-            (providerName != "Groq" || model in listOf("qwen/qwen3.8-27b", "meta-models/muse-spark-open"))
+            (providerName != "Groq" || model == "qwen/qwen3.8-27b")
         val imageInstruction = when {
             canSendImage -> "Use the attached cropped diagram together with the saved and edited question text and answer choices below. The diagram is the only image source."
             sourceImageUri != null -> "The selected model does not accept images. Solve using the saved question text and answer choices only; do not guess unseen diagram details."

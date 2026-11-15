@@ -35,6 +35,10 @@ class MainActivity : ComponentActivity() {
         val questionDao = app.database.questionDao()
         
         val preferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val savedGroqModel = preferences.getString("groq_model", null)
+        if (savedGroqModel == "qwen/qwen3.8-27b" || savedGroqModel == "meta-models/muse-spark-open") {
+            preferences.edit().putString("groq_model", "openai/gpt-oss-120b").apply()
+        }
         setContent {
             var darkTheme by remember { mutableStateOf(preferences.getBoolean("dark_theme", true)) }
             var darcula by remember { mutableStateOf(preferences.getBoolean("darcula_theme", false)) }

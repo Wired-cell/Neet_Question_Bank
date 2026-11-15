@@ -64,7 +64,10 @@ fun SettingsScreen(
     var geminiTestSucceeded by remember { mutableStateOf<Boolean?>(null) }
     var groqKey by remember { mutableStateOf(prefs.getString("groq_api_key", "") ?: "") }
     var nvidiaKey by remember { mutableStateOf(prefs.getString("nvidia_api_key", "") ?: "") }
+    var geminiModel by remember { mutableStateOf(prefs.getString("gemini_model", "gemini-3.8-flash") ?: "gemini-3.8-flash") }
     var groqModel by remember { mutableStateOf(prefs.getString("groq_model", "qwen/qwen3.8-27b") ?: "qwen/qwen3.8-27b") }
+    val geminiModels = listOf("gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite")
+    val groqModels = listOf("qwen/qwen3.8-27b", "meta-models/muse-spark-open", "openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.1-8b-instant", "llama-3.3-70b-versatile", "minimaxai/minimax-m2.7")
     var nvidiaModel by remember { mutableStateOf(prefs.getString("nvidia_model", "nvidia/nemotron-3.5-super-vl-120b-a12b") ?: "nvidia/nemotron-3.5-super-vl-120b-a12b") }
     var isTestingGroq by remember { mutableStateOf(false) }
     var isTestingNvidia by remember { mutableStateOf(false) }
@@ -143,6 +146,23 @@ fun SettingsScreen(
                         placeholder = { Text("Enter your Google AI Studio API key") },
                         singleLine = true
                     )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text("Model to use", style = MaterialTheme.typography.labelLarge)
+                    var geminiModelMenuExpanded by remember { mutableStateOf(false) }
+                    androidx.compose.foundation.layout.Box {
+                        OutlinedButton(onClick = { geminiModelMenuExpanded = true }, modifier = Modifier.fillMaxWidth()) {
+                            Text(geminiModel)
+                        }
+                        DropdownMenu(expanded = geminiModelMenuExpanded, onDismissRequest = { geminiModelMenuExpanded = false }) {
+                            geminiModels.forEach { option ->
+                                DropdownMenuItem(text = { Text(option) }, onClick = {
+                                    geminiModel = option
+                                    prefs.edit().putString("gemini_model", option).apply()
+                                    geminiModelMenuExpanded = false
+                                })
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "This key will be used to fetch explanations for questions. Get your key from Google AI Studio.",
@@ -217,7 +237,7 @@ fun SettingsScreen(
                     groqTestSucceeded = null
                 },
                 model = groqModel,
-                models = listOf("qwen/qwen3.8-27b", "meta-models/muse-spark-open"),
+                models = groqModels,
                 onModelChange = {
                     groqModel = it
                     prefs.edit().putString("groq_model", it).apply()

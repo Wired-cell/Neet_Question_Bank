@@ -500,11 +500,15 @@ private fun ProviderApiCard(
 
 private fun runOpenAiCompatibleTest(apiKey: String, model: String, endpoint: String): String {
     val prompt = "Introduce yourself briefly as the AI assistant in this app. Then answer this exact question: how many letter r's are in the word strawberry? Count the letters carefully."
-    val body = JSONObject()
+    val bodyJson = JSONObject()
         .put("model", model)
         .put("messages", org.json.JSONArray().put(JSONObject().put("role", "user").put("content", prompt)))
         .put("temperature", 0.2)
-        .toString()
+        .put("max_completion_tokens", 2048)
+    if (model.startsWith("openai/gpt-oss-")) {
+        bodyJson.put("reasoning_effort", "low")
+    }
+    val body = bodyJson.toString()
     val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
         requestMethod = "POST"
         connectTimeout = 15000
@@ -529,10 +533,15 @@ private fun runOpenAiCompatibleTest(apiKey: String, model: String, endpoint: Str
             throw IllegalStateException(message ?: "Provider returned HTTP $status.")
         }
         val response = JSONObject(responseText)
-        val answer = response.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("message")?.opt("content")
+        val choice = response.optJSONArray("choices")?.optJSONObject(0)
+            ?: throw IllegalStateException("Provider returned no answer choice.")
+        if (choice.optString("finish_reason") == "length") {
+            throw IllegalStateException("The model reached its response limit during this test.")
+        }
+        val answer = choice.optJSONObject("message")?.opt("content")
         val text = when (answer) {
             is String -> answer
-            is org.json.JSONArray -> (0 until answer.length()).mapNotNull { answer.optJSONObject(it)?.optString("text") }.filter { it.isNotBlank() }.joinToString("\\n")
+            is org.json.JSONArray -> (0 until answer.length()).mapNotNull { answer.optJSONObject(it)?.optString("text") }.filter { it.isNotBlank() }.joinToString("\n")
             else -> ""
         }.trim()
         if (text.isBlank()) throw IllegalStateException("Provider returned an empty answer.")

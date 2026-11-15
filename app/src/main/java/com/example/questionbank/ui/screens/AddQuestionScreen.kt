@@ -1161,7 +1161,7 @@ fun ExplanationSection(
     }
     var providerMenuExpanded by remember { mutableStateOf(false) }
     val selectedModel = when (selectedProvider) {
-        "Groq" -> prefs.getString("groq_model", "qwen/qwen3.8-27b")
+        "Groq" -> prefs.getString("groq_model", "openai/gpt-oss-120b")
         "NVIDIA Build" -> prefs.getString("nvidia_model", "nvidia/nemotron-3.5-super-vl-120b-a12b")
         else -> prefs.getString("gemini_model", "gemini-3.8-flash")
     }
